@@ -17,16 +17,24 @@ A restaurant website for "Diner Grill" — the 24-hour counter diner on Irving P
 | `/story` | `src/pages/StoryPage.tsx` | Restaurant history and story |
 | `/menu` | `src/pages/MenuPage.tsx` | Full menu listing |
 | `/visit` | `src/pages/VisitPage.tsx` | Location, hours, and contact info |
+| `/order` | `src/pages/OrderPage.tsx` | Online ordering with Stripe payments |
+| `/admin` | `src/pages/AdminPage.tsx` | Staff dashboard (orders, menu, settings) — requires `ADMIN_TOKEN` |
 
 ## Running the app
 
 ```bash
-npm run dev       # Start dev server on port 5000
+npm run dev:all   # Start API server (port 8787) + Vite dev server (port 5000)
 npm run build     # Production build
-npm run preview   # Preview production build
+npm run seed      # Seed the SQLite database
 ```
 
-The dev workflow is configured as **"Start application"** (`npm run dev`).
+The dev workflow is configured as **"Start application"** (`npm run dev:all`). Vite proxies `/api` to the Express server on port 8787. The SQLite database auto-seeds when empty.
+
+## Environment variables (see .env.example)
+
+- `ADMIN_TOKEN` — admin dashboard login (defaults to `change-me`)
+- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `VITE_STRIPE_PK` — without these, ordering shows a "call to order" fallback
+- `PRINTER_IP`, `PRINTER_DEVICE_ID` — Epson receipt printer (restaurant LAN)
 
 ## Project structure
 
