@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 37 33% 92%;
+    --foreground: 30 21% 7%;
+    --card: 37 33% 92%;
+    --card-foreground: 30 21% 7%;
+    --popover: 37 33% 92%;
+    --popover-foreground: 30 21% 7%;
+    --primary: 7 68% 51%;
+    --primary-foreground: 37 33% 92%;
+    --secondary: 36 24% 87%;
+    --secondary-foreground: 30 21% 7%;
+    --muted: 36 24% 87%;
+    --muted-foreground: 30 10% 38%;
+    --accent: 41 85% 59%;
+    --accent-foreground: 30 21% 7%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 12% 78%;
+    --input: 30 12% 78%;
+    --ring: 7 68% 51%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-ink text-cream font-body antialiased;
+  }
+  ::selection {
+    background: #d8402e;
+    color: #f4ede0;
+  }
+}
+
+@layer utilities {
+  /* Oversized diner display headline */
+  .headline {
+    @apply font-display uppercase leading-[0.86] tracking-[0.01em];
+  }
+
+  /* Neon sign glow for the OPEN 24 HOURS treatment */
+  .neon-text {
+    color: #ffd9c9;
+    text-shadow:
+      0 0 6px rgba(255, 122, 82, 0.9),
+      0 0 18px rgba(255, 90, 60, 0.65),
+      0 0 42px rgba(216, 64, 46, 0.5);
+  }
+
+  /* Subtle griddle-grain texture on dark sections */
+  .grain {
+    background-image:
+      radial-gradient(rgba(244, 237, 224, 0.045) 1px, transparent 1px),
+      radial-gradient(rgba(244, 237, 224, 0.03) 1px, transparent 1px);
+    background-size: 22px 22px, 46px 46px;
+    background-position: 0 0, 11px 11px;
+  }
+
+  /* Paper texture for cream menu sections */
+  .paper-grain {
+    background-image: radial-gradient(rgba(23, 19, 15, 0.05) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+
+  /* Dotted price leader rows on the menu */
+  .leader {
+    @apply flex items-baseline gap-2;
+  }
+  .leader::after {
+    content: "";
+    @apply flex-1 border-b-2 border-dotted border-ink/30 translate-y-[-4px];
+  }
+
+  /* ---- Vintage diner motion ---- */
+
+  /* Neon sign flicker with brief dropouts */
+  .neon-flicker {
+    animation: neon-flicker 4.2s linear infinite;
+  }
+
+  /* Chasing theater-marquee bulbs (alternating lit/dim dots) */
+  .chase-lights {
+    height: 12px;
+    background-image:
+      radial-gradient(circle 4px at 12px 50%, #ffd98a 90%, transparent 98%),
+      radial-gradient(circle 4px at 32px 50%, rgba(255, 217, 138, 0.22) 90%, transparent 98%);
+    background-size: 40px 100%;
+    background-repeat: repeat-x;
+    animation: chase 0.9s steps(1) infinite;
+  }
+
+  /* Hanging sign sway */
+  .swing {
+    transform-origin: top center;
+    animation: swing 3.6s ease-in-out infinite;
+  }
+
+  /* Rubber-stamp entrance */
+  .stamp-in {
+    animation: stamp 0.38s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  }
+
+  /* Slow rotating round sign */
+  .spin-slow {
+    animation: spin-slow 16s linear infinite;
+  }
+
+  /* Subtle scroll reveal */
+  .reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.9, 0.3, 1);
+  }
+  .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes neon-flicker {
+  0%, 6.9%, 8.2%, 54.9%, 57.5%, 82.9%, 84%, 100% { opacity: 1; }
+  7%, 8.1%, 55%, 57.4%, 83%, 83.9% { opacity: 0.32; }
+}
+
+@keyframes chase {
+  to { background-position: 20px 0, 20px 0; }
+}
+
+@keyframes swing {
+  0%, 100% { transform: rotate(-3.5deg); }
+  50% { transform: rotate(3.5deg); }
+}
+
+@keyframes stamp {
+  from { opacity: 0; transform: scale(1.28) rotate(-2.5deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+
+@keyframes spin-slow {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neon-flicker, .chase-lights, .swing, .stamp-in, .spin-slow {
+    animation: none !important;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
