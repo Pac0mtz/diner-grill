@@ -12,7 +12,6 @@ export default function Marquee() {
   const row = [...ITEMS, ...ITEMS];
   return (
     <div className="border-y-4 border-ink bg-chili" aria-hidden>
-      <div className="chase-lights" />
       <div className="group overflow-hidden py-3">
         <div className="flex w-max animate-marquee items-center gap-8 pr-8 [animation-play-state:running] group-hover:[animation-play-state:paused]">
           {row.map((item, i) => (
@@ -23,7 +22,6 @@ export default function Marquee() {
           ))}
         </div>
       </div>
-      <div className="chase-lights" />
     </div>
   );
 }
