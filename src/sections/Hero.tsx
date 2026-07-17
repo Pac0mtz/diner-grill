@@ -38,15 +38,13 @@ export default function Hero() {
             >
               See the menu
             </Link>
-            <a
-              href={SITE.orderUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to={SITE.orderUrl}
               className="flex items-center gap-2 rounded-md bg-mustard px-7 py-3.5 font-mono text-sm font-medium uppercase tracking-[0.14em] text-ink transition-transform hover:-translate-y-0.5 hover:bg-cream"
             >
               <ShoppingBag className="h-4 w-4" aria-hidden />
               Order online
-            </a>
+            </Link>
             <Link
               to="/visit"
               className="flex items-center gap-2 rounded-md border border-cream/25 px-7 py-3.5 font-mono text-sm uppercase tracking-[0.14em] text-cream transition-colors hover:border-mustard hover:text-mustard"

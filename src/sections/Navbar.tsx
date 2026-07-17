@@ -66,15 +66,13 @@ export default function Navbar() {
             </span>
             Open now
           </span>
-          <a
-            href={SITE.orderUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={SITE.orderUrl}
             className="hidden items-center gap-2 rounded-md bg-mustard px-4 py-2 font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-ink transition-colors hover:bg-cream sm:flex"
           >
             <ShoppingBag className="h-3.5 w-3.5" aria-hidden />
             Order online
-          </a>
+          </Link>
           <a
             href={SITE.phoneHref}
             className="flex items-center gap-2 rounded-md bg-chili px-4 py-2 font-mono text-[12px] font-medium uppercase tracking-[0.14em] text-cream transition-colors hover:bg-ember"
@@ -113,15 +111,13 @@ export default function Navbar() {
               </li>
             ))}
             <li>
-              <a
-                href={SITE.orderUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to={SITE.orderUrl}
                 className="mt-2 flex items-center justify-center gap-2 rounded-md bg-mustard px-3 py-3 font-mono text-sm font-medium uppercase tracking-[0.18em] text-ink"
               >
                 <ShoppingBag className="h-4 w-4" aria-hidden />
                 Order online
-              </a>
+              </Link>
             </li>
           </ul>
         </nav>
