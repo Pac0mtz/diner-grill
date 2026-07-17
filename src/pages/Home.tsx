@@ -1,8 +1,11 @@
 import Hero from "../sections/Hero";
 import Marquee from "../sections/Marquee";
+import Story from "../sections/Story";
 import Slinger from "../sections/Slinger";
+import MenuSection from "../sections/MenuSection";
 import Gallery from "../sections/Gallery";
 import CtaBand from "../sections/CtaBand";
+import Visit from "../sections/Visit";
 import { usePageMeta } from "../hooks/usePageMeta";
 
 export default function Home() {
@@ -14,9 +17,12 @@ export default function Home() {
     <>
       <Hero />
       <Marquee />
+      <Story />
       <Slinger />
+      <MenuSection />
       <Gallery />
       <CtaBand />
+      <Visit />
     </>
   );
 }

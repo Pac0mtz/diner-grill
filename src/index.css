@@ -93,8 +93,8 @@
   .chase-lights {
     height: 12px;
     background-image:
-      radial-gradient(circle 4px at 12px 50%, #ffd98a 90%, transparent 98%),
-      radial-gradient(circle 4px at 32px 50%, rgba(255, 217, 138, 0.22) 90%, transparent 98%);
+      radial-gradient(circle 4px at 12px 50%, #ffffff 90%, transparent 98%),
+      radial-gradient(circle 4px at 32px 50%, rgba(255, 255, 255, 0.22) 90%, transparent 98%);
     background-size: 40px 100%;
     background-repeat: repeat-x;
     animation: chase 0.9s steps(1) infinite;
