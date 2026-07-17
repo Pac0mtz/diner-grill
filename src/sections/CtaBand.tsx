@@ -13,15 +13,13 @@ export default function CtaBand() {
           </p>
         </div>
         <div className="flex flex-wrap justify-center gap-4">
-          <a
-            href={SITE.orderUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            to={SITE.orderUrl}
             className="flex items-center gap-2 rounded-md bg-ink px-7 py-3.5 font-mono text-sm font-medium uppercase tracking-[0.14em] text-cream transition-transform hover:-translate-y-0.5"
           >
             <ShoppingBag className="h-4 w-4" aria-hidden />
             Order online
-          </a>
+          </Link>
           <Link
             to="/menu"
             className="rounded-md border-2 border-cream/70 px-7 py-3.5 font-mono text-sm uppercase tracking-[0.14em] text-cream transition-colors hover:bg-cream hover:text-chili"

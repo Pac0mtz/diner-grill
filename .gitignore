@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Local secrets & SQLite data
+.env
+server/data
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
