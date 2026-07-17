@@ -93,55 +93,65 @@ export default function OrderMenu({ sections, cart, onAdd, onSetQty }: OrderMenu
                 return (
                   <li
                     key={item.id}
-                    className="rounded-md border border-ink/10 bg-cream/60 p-4 transition-shadow hover:shadow-ticket"
+                    className="flex gap-4 rounded-md border border-ink/10 bg-cream/60 p-4 transition-shadow hover:shadow-ticket"
                   >
-                    <div className="flex items-baseline gap-3">
-                      <span className="leader flex-1 font-display text-[1.4rem] uppercase tracking-[0.04em]">
-                        {item.name}
-                        {item.tag && (
-                          <span
-                            className={`ml-3 inline-block -translate-y-0.5 rounded-sm px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.14em] ${TAG_STYLES[item.tag] ?? "bg-ink text-cream"}`}
-                          >
-                            {item.tag}
-                          </span>
-                        )}
-                      </span>
-                      <span className="font-mono text-base font-medium text-chili">
-                        {formatCents(item.price_cents)}
-                      </span>
-                    </div>
-                    {item.description && (
-                      <p className="mt-1 text-sm leading-relaxed text-ink/60">{item.description}</p>
+                    {item.image && (
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        loading="lazy"
+                        className="h-20 w-20 shrink-0 self-start rounded-md border-2 border-ink/15 object-cover md:h-24 md:w-24"
+                      />
                     )}
-                    <div className="mt-3 flex justify-end">
-                      {qty === 0 ? (
-                        <button
-                          onClick={() => onAdd(item)}
-                          className="flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-cream transition-colors hover:bg-chili"
-                          aria-label={`Add ${item.name} to order`}
-                        >
-                          <Plus className="h-3.5 w-3.5" aria-hidden />
-                          Add
-                        </button>
-                      ) : (
-                        <div className="flex items-center gap-1 rounded-md border-2 border-ink bg-cream">
-                          <button
-                            onClick={() => onSetQty(item.id, qty - 1)}
-                            className="grid h-8 w-8 place-items-center text-ink transition-colors hover:bg-mustard"
-                            aria-label={`Remove one ${item.name}`}
-                          >
-                            <Minus className="h-4 w-4" aria-hidden />
-                          </button>
-                          <span className="w-8 text-center font-mono text-sm font-medium">{qty}</span>
-                          <button
-                            onClick={() => onSetQty(item.id, qty + 1)}
-                            className="grid h-8 w-8 place-items-center text-ink transition-colors hover:bg-mustard"
-                            aria-label={`Add one more ${item.name}`}
-                          >
-                            <Plus className="h-4 w-4" aria-hidden />
-                          </button>
-                        </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-3">
+                        <span className="leader flex-1 font-display text-[1.4rem] uppercase tracking-[0.04em]">
+                          {item.name}
+                          {item.tag && (
+                            <span
+                              className={`ml-3 inline-block -translate-y-0.5 rounded-sm px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.14em] ${TAG_STYLES[item.tag] ?? "bg-ink text-cream"}`}
+                            >
+                              {item.tag}
+                            </span>
+                          )}
+                        </span>
+                        <span className="font-mono text-base font-medium text-chili">
+                          {formatCents(item.price_cents)}
+                        </span>
+                      </div>
+                      {item.description && (
+                        <p className="mt-1 text-sm leading-relaxed text-ink/60">{item.description}</p>
                       )}
+                      <div className="mt-3 flex justify-end">
+                        {qty === 0 ? (
+                          <button
+                            onClick={() => onAdd(item)}
+                            className="flex items-center gap-1.5 rounded-md bg-ink px-4 py-2 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-cream transition-colors hover:bg-chili"
+                            aria-label={`Add ${item.name} to order`}
+                          >
+                            <Plus className="h-3.5 w-3.5" aria-hidden />
+                            Add
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1 rounded-md border-2 border-ink bg-cream">
+                            <button
+                              onClick={() => onSetQty(item.id, qty - 1)}
+                              className="grid h-8 w-8 place-items-center text-ink transition-colors hover:bg-mustard"
+                              aria-label={`Remove one ${item.name}`}
+                            >
+                              <Minus className="h-4 w-4" aria-hidden />
+                            </button>
+                            <span className="w-8 text-center font-mono text-sm font-medium">{qty}</span>
+                            <button
+                              onClick={() => onSetQty(item.id, qty + 1)}
+                              className="grid h-8 w-8 place-items-center text-ink transition-colors hover:bg-mustard"
+                              aria-label={`Add one more ${item.name}`}
+                            >
+                              <Plus className="h-4 w-4" aria-hidden />
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </li>
                 );

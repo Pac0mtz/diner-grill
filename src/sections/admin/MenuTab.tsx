@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
+import { ImagePlus, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import type { AdminItem, AdminSection } from "../../lib/api-types";
 import { dollarsToCents, formatCents } from "../../lib/money";
 import { adminFetch, ApiError } from "./api";
@@ -39,6 +39,7 @@ function ItemRow({
   const [sort, setSort] = useState(String(item.sort));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function startEdit() {
     setName(item.name);
@@ -113,9 +114,60 @@ function ItemRow({
     }
   }
 
+  async function uploadPhoto(file: File) {
+    setBusy(true);
+    setError(null);
+    try {
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = String(reader.result ?? "");
+          resolve(result.includes(",") ? result.split(",")[1] : result);
+        };
+        reader.onerror = () => reject(new Error("Could not read that file."));
+        reader.readAsDataURL(file);
+      });
+      const uploaded = await adminFetch<{ url: string }>("/api/admin/upload", {
+        method: "POST",
+        body: { filename: file.name, dataBase64 },
+      });
+      await adminFetch(`/api/admin/items/${item.id}`, {
+        method: "PUT",
+        body: { image: uploaded.url },
+      });
+      onSaved();
+    } catch (err) {
+      await handleError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function handleFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) uploadPhoto(file);
+  }
+
   if (!editing) {
     return (
       <li className={`flex flex-wrap items-center gap-3 rounded-md border px-3 py-2.5 ${item.available ? "border-ink/15 bg-cream/60" : "border-ink/10 bg-ink/5 opacity-60"}`}>
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            loading="lazy"
+            className="h-12 w-12 shrink-0 rounded-md border-2 border-ink/15 object-cover"
+          />
+        ) : (
+          <span
+            className="grid h-12 w-12 shrink-0 place-items-center rounded-md border-2 border-dashed border-ink/20 text-ink/30"
+            title="No photo yet"
+            aria-label="No photo yet"
+          >
+            <UtensilsCrossed className="h-5 w-5" aria-hidden />
+          </span>
+        )}
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold">
             {item.name}
@@ -141,6 +193,23 @@ function ItemRow({
           On menu
         </label>
         <button
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="grid h-8 w-8 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-chili hover:text-chili disabled:opacity-40"
+          aria-label={`Upload photo for ${item.name}`}
+          title="Upload photo"
+        >
+          <ImagePlus className="h-3.5 w-3.5" aria-hidden />
+        </button>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFile}
+          aria-hidden
+        />
+        <button
           onClick={startEdit}
           className="grid h-8 w-8 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ink hover:text-ink"
           aria-label={`Edit ${item.name}`}
@@ -155,6 +224,7 @@ function ItemRow({
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden />
         </button>
+        {error && <p role="alert" className="w-full text-xs font-medium text-ember">{error}</p>}
       </li>
     );
   }

@@ -11,6 +11,7 @@ import bcrypt from "bcryptjs";
 import { loadEnv } from "./env.js";
 import { query, initDb, TAX_RATE, ORDER_STATUSES, getSetting, setSetting, parseOrder, pool } from "./db.js";
 import { seedIfEmpty } from "./seed.js";
+import { syncMenu } from "./sync-menu.js";
 
 loadEnv();
 
@@ -25,9 +26,16 @@ const stripe = STRIPE_SECRET_KEY ? new Stripe(STRIPE_SECRET_KEY) : null;
 
 await initDb();
 
-// Auto-seed an empty database so a fresh clone is usable immediately.
+// Auto-seed an empty database so a fresh clone is usable immediately; on an
+// existing database, reconcile to the printed menu only when SYNC_MENU=1.
 if (await seedIfEmpty()) {
   console.log("[server] Empty database — seeded menu from server/seed-data.js");
+} else if (process.env.SYNC_MENU === "1") {
+  const c = await syncMenu();
+  console.log(
+    `[server] SYNC_MENU=1 — sections +${c.sectionsInserted}/${c.sectionsUpdated} updated, ` +
+      `items +${c.itemsInserted}/${c.itemsUpdated} updated/${c.itemsDeactivated} deactivated`
+  );
 }
 
 const app = express();
@@ -63,8 +71,9 @@ app.post("/api/stripe/webhook", express.raw({ type: "*/*" }), async (req, res) =
   res.json({ received: true });
 });
 
-// JSON body parsing for everything else.
-app.use(express.json());
+// JSON body parsing for everything else. 6mb headroom so base64 photo
+// uploads (~5.4MB for a 4MB image) fit through POST /api/admin/upload.
+app.use(express.json({ limit: "6mb" }));
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -97,6 +106,12 @@ async function adminAuth(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+/** Optional image path from a request body — string (≤300 chars) or null. */
+function imageOrNull(value) {
+  if (value === undefined || value === null || value === "") return null;
+  return String(value).slice(0, 300);
 }
 
 // ---------------------------------------------------------------------------
@@ -133,19 +148,22 @@ app.post("/api/admin/logout", adminAuth, h(async (req, res) => {
 // Public API
 // ---------------------------------------------------------------------------
 
-// GET /api/menu — sections with available items.
+// GET /api/menu — sections with available items. Sections whose items were
+// all deactivated by a menu sync (legacy categories) are hidden entirely.
 app.get("/api/menu", h(async (req, res) => {
   const sections = (await query("SELECT id, label, note, sort FROM sections ORDER BY sort, id")).rows;
   const items = (
     await query(
-      "SELECT id, section_id, name, price_cents, description, tag FROM items WHERE available = 1 ORDER BY sort, id"
+      "SELECT id, section_id, name, price_cents, description, tag, image FROM items WHERE available = 1 ORDER BY sort, id"
     )
   ).rows;
   res.json({
-    sections: sections.map((s) => ({
-      ...s,
-      items: items.filter((i) => i.section_id === s.id).map(({ section_id, ...rest }) => rest),
-    })),
+    sections: sections
+      .map((s) => ({
+        ...s,
+        items: items.filter((i) => i.section_id === s.id).map(({ section_id, ...rest }) => rest),
+      }))
+      .filter((s) => s.items.length > 0),
   });
 }));
 
@@ -287,12 +305,43 @@ app.get("/api/admin/menu", adminAuth, h(async (req, res) => {
   const sections = (await query("SELECT id, label, note, sort FROM sections ORDER BY sort, id")).rows;
   const items = (
     await query(
-      "SELECT id, section_id, name, price_cents, description, tag, available, sort FROM items ORDER BY sort, id"
+      "SELECT id, section_id, name, price_cents, description, tag, available, sort, image FROM items ORDER BY sort, id"
     )
   ).rows;
   res.json({
     sections: sections.map((s) => ({ ...s, items: items.filter((i) => i.section_id === s.id) })),
   });
+}));
+
+// --- Photo uploads ---
+const UPLOAD_DIR = path.join(__dirname, "data", "uploads");
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const UPLOAD_EXTS = new Set(["jpg", "jpeg", "png", "webp"]);
+const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // 4MB
+
+// POST /api/admin/upload — {filename, dataBase64} → {url}. No multer needed.
+app.post("/api/admin/upload", adminAuth, h(async (req, res) => {
+  const { filename, dataBase64 } = req.body || {};
+  if (!filename || typeof filename !== "string") return bad(res, 400, "filename is required.");
+  if (!dataBase64 || typeof dataBase64 !== "string") return bad(res, 400, "dataBase64 is required.");
+  const ext = path.extname(filename).toLowerCase().replace(".", "");
+  if (!UPLOAD_EXTS.has(ext)) {
+    return bad(res, 400, "Only jpg, jpeg, png or webp images are allowed.");
+  }
+  let buf;
+  try {
+    buf = Buffer.from(dataBase64, "base64");
+  } catch {
+    return bad(res, 400, "dataBase64 is not valid base64.");
+  }
+  if (!buf || buf.length === 0) return bad(res, 400, "The uploaded file is empty.");
+  if (buf.length > MAX_UPLOAD_BYTES) {
+    return bad(res, 400, "Image is too large — 4MB max.");
+  }
+  const safeName = `${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}.${ext}`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, safeName), buf);
+  console.log(`[upload] saved ${safeName} (${buf.length} bytes)`);
+  res.status(201).json({ url: `/uploads/${safeName}` });
 }));
 
 // --- Sections ---
@@ -331,7 +380,7 @@ app.delete("/api/admin/sections/:id", adminAuth, h(async (req, res) => {
 
 // --- Items ---
 app.post("/api/admin/items", adminAuth, h(async (req, res) => {
-  const { section_id, name, price_cents, description, tag, available, sort } = req.body || {};
+  const { section_id, name, price_cents, description, tag, available, sort, image } = req.body || {};
   const sectionId = Number(section_id);
   if (!Number.isInteger(sectionId)) return bad(res, 400, "section_id is required.");
   if (!(await query("SELECT id FROM sections WHERE id = $1", [sectionId])).rows[0]) {
@@ -343,7 +392,7 @@ app.post("/api/admin/items", adminAuth, h(async (req, res) => {
     return bad(res, 400, "price_cents must be a non-negative integer.");
   }
   const { rows } = await query(
-    "INSERT INTO items (section_id, name, price_cents, description, tag, available, sort) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
+    "INSERT INTO items (section_id, name, price_cents, description, tag, available, sort, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
     [
       sectionId,
       String(name).trim(),
@@ -352,6 +401,7 @@ app.post("/api/admin/items", adminAuth, h(async (req, res) => {
       tag ? String(tag) : null,
       available === false || available === 0 ? 0 : 1,
       Number(sort) || 0,
+      imageOrNull(image),
     ]
   );
   res.status(201).json(rows[0]);
@@ -361,7 +411,7 @@ app.put("/api/admin/items/:id", adminAuth, h(async (req, res) => {
   const id = Number(req.params.id);
   const existing = (await query("SELECT * FROM items WHERE id = $1", [id])).rows[0];
   if (!existing) return bad(res, 404, "Item not found.");
-  const { section_id, name, price_cents, description, tag, available, sort } = req.body || {};
+  const { section_id, name, price_cents, description, tag, available, sort, image } = req.body || {};
   if (section_id !== undefined) {
     const sid = Number(section_id);
     if (!(await query("SELECT id FROM sections WHERE id = $1", [sid])).rows[0]) {
@@ -372,8 +422,8 @@ app.put("/api/admin/items/:id", adminAuth, h(async (req, res) => {
     return bad(res, 400, "price_cents must be a non-negative integer.");
   }
   const { rows } = await query(
-    `UPDATE items SET section_id = $1, name = $2, price_cents = $3, description = $4, tag = $5, available = $6, sort = $7
-     WHERE id = $8 RETURNING *`,
+    `UPDATE items SET section_id = $1, name = $2, price_cents = $3, description = $4, tag = $5, available = $6, sort = $7, image = $8
+     WHERE id = $9 RETURNING *`,
     [
       section_id !== undefined ? Number(section_id) : existing.section_id,
       name !== undefined ? String(name).trim() : existing.name,
@@ -382,6 +432,7 @@ app.put("/api/admin/items/:id", adminAuth, h(async (req, res) => {
       tag !== undefined ? (tag ? String(tag) : null) : existing.tag,
       available !== undefined ? (available === false || available === 0 ? 0 : 1) : existing.available,
       sort !== undefined ? Number(sort) || 0 : existing.sort,
+      image !== undefined ? imageOrNull(image) : existing.image,
       id,
     ]
   );
@@ -495,6 +546,12 @@ app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
   for (const k of SETTINGS_KEYS) out[k] = (await getSetting(k)) || "";
   res.json(out);
 }));
+
+// ---------------------------------------------------------------------------
+// Uploaded photos (served before the SPA fallback; missing files → clean 404)
+// ---------------------------------------------------------------------------
+app.use("/uploads", express.static(UPLOAD_DIR));
+app.use("/uploads", (req, res) => bad(res, 404, "Not found."));
 
 // ---------------------------------------------------------------------------
 // Static frontend (production build) + SPA fallback

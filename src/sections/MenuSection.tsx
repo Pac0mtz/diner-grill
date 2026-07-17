@@ -26,15 +26,15 @@ export default function MenuSection() {
           </p>
         </div>
 
-        {/* category tabs */}
-        <div className="mt-12 flex flex-wrap gap-2" role="tablist" aria-label="Menu categories">
+        {/* category tabs — horizontally scrollable on small screens */}
+        <div className="-mx-5 mt-12 flex gap-2 overflow-x-auto px-5 pb-2 md:mx-0 md:flex-wrap md:px-0 md:pb-0" role="tablist" aria-label="Menu categories">
           {MENU.map((c) => (
             <button
               key={c.id}
               role="tab"
               aria-selected={active === c.id}
               onClick={() => setActive(c.id)}
-              className={`rounded-full border-2 px-5 py-2.5 font-mono text-[12px] uppercase tracking-[0.14em] transition-all ${
+              className={`whitespace-nowrap rounded-full border-2 px-5 py-2.5 font-mono text-[12px] uppercase tracking-[0.14em] transition-all ${
                 active === c.id
                   ? "border-ink bg-ink text-cream shadow-ticket"
                   : "border-ink/25 bg-transparent text-ink/70 hover:border-ink hover:text-ink"
@@ -58,30 +58,40 @@ export default function MenuSection() {
 
           <ul key={category.id} className="mt-8 grid gap-x-14 gap-y-7 md:grid-cols-2">
             {category.items.map((item, i) => (
-              <li key={item.name} className="stamp-in" style={{ animationDelay: `${i * 45}ms` }}>
-                <div className="flex items-baseline gap-3">
-                  <span className="leader flex-1 font-display text-[1.55rem] uppercase tracking-[0.04em]">
-                    {item.name}
-                    {item.tag && (
-                      <span
-                        className={`ml-3 inline-block -translate-y-0.5 rounded-sm px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.14em] ${TAG_STYLES[item.tag]}`}
-                      >
-                        {item.tag}
-                      </span>
-                    )}
-                  </span>
-                  <span className="font-mono text-lg font-medium text-chili">${item.price}</span>
-                </div>
-                {item.description && (
-                  <p className="mt-1.5 max-w-md text-sm leading-relaxed text-ink/60">{item.description}</p>
+              <li key={item.name} className="stamp-in flex gap-4" style={{ animationDelay: `${i * 45}ms` }}>
+                {item.image && (
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    loading="lazy"
+                    className="h-16 w-16 shrink-0 rounded-md border-2 border-ink/15 object-cover"
+                  />
                 )}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline gap-3">
+                    <span className="leader flex-1 font-display text-[1.55rem] uppercase tracking-[0.04em]">
+                      {item.name}
+                      {item.tag && (
+                        <span
+                          className={`ml-3 inline-block -translate-y-0.5 rounded-sm px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.14em] ${TAG_STYLES[item.tag]}`}
+                        >
+                          {item.tag}
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-mono text-lg font-medium text-chili">${item.price}</span>
+                  </div>
+                  {item.description && (
+                    <p className="mt-1.5 max-w-md text-sm leading-relaxed text-ink/60">{item.description}</p>
+                  )}
+                </div>
               </li>
             ))}
           </ul>
         </div>
 
         <p className="mt-8 text-center font-mono text-[12px] uppercase tracking-[0.2em] text-ink/45">
-          Egg whites +1.00 · English muffin +0.50 · French bread on any sandwich +1.75
+          On French bread add $1.65 · Consuming raw or undercooked meats, poultry, seafood, shellfish, or eggs may increase your risk of foodborne illness
         </p>
       </div>
     </section>

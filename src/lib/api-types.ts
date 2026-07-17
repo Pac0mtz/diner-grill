@@ -6,6 +6,7 @@ export type ApiMenuItem = {
   price_cents: number;
   description: string | null;
   tag: string | null;
+  image: string | null;
 };
 
 export type ApiMenuSection = {
@@ -63,4 +64,5 @@ export type AdminItem = {
   tag: string | null;
   available: 0 | 1;
   sort: number;
+  image: string | null;
 };
