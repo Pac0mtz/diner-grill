@@ -28,11 +28,19 @@ npm run build     # Production build
 npm run seed      # Seed the SQLite database
 ```
 
-The dev workflow is configured as **"Start application"** (`npm run dev:all`). Vite proxies `/api` to the Express server on port 8787. The SQLite database auto-seeds when empty.
+The dev workflow is configured as **"Start application"** (`npm run dev:all`). Vite proxies `/api` to the Express server on port 8787.
+
+## Database
+
+Uses Replit's built-in PostgreSQL (`DATABASE_URL`). Tables are created automatically at server startup (`server/db.js`) and the menu auto-seeds when empty. Admin login uses the `admin_users` table (bcrypt password hashes) with session tokens in `admin_sessions`. Create/update admin users with:
+
+```bash
+node server/create-admin.js <username> <password>
+```
 
 ## Environment variables (see .env.example)
 
-- `ADMIN_TOKEN` — admin dashboard login (defaults to `change-me`)
+- `ADMIN_TOKEN` — optional static token for the print agent / automation (admin dashboard uses username/password)
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `VITE_STRIPE_PK` — without these, ordering shows a "call to order" fallback
 - `PRINTER_IP`, `PRINTER_DEVICE_ID` — Epson receipt printer (restaurant LAN)
 

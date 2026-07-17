@@ -3,10 +3,11 @@ import { Lock, LogOut } from "lucide-react";
 import { usePageMeta } from "../hooks/usePageMeta";
 import {
   adminFetch,
+  adminLogin,
+  adminLogout,
   ApiError,
   clearAdminToken,
   getAdminToken,
-  setAdminToken,
 } from "../sections/admin/api";
 import OrdersTab from "../sections/admin/OrdersTab";
 import MenuTab from "../sections/admin/MenuTab";
@@ -24,15 +25,17 @@ export default function AdminPage() {
   usePageMeta("Counter Admin | Diner Grill", "Diner Grill order and menu admin.");
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
-  const [tokenInput, setTokenInput] = useState("");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("orders");
 
   const logout = useCallback(() => {
-    clearAdminToken();
+    void adminLogout();
     setAuthed(false);
-    setTokenInput("");
+    setUsername("");
+    setPassword("");
   }, []);
 
   // Verify a stored token on first load.
@@ -55,19 +58,19 @@ export default function AdminPage() {
 
   async function handleLogin(e: FormEvent) {
     e.preventDefault();
-    if (!tokenInput.trim()) return;
+    if (!username.trim() || !password) return;
     setBusy(true);
     setLoginError(null);
-    setAdminToken(tokenInput.trim());
     try {
-      await adminFetch("/api/admin/settings");
+      await adminLogin(username.trim(), password);
       setAuthed(true);
-      setTokenInput("");
+      setUsername("");
+      setPassword("");
     } catch (err) {
       clearAdminToken();
       setLoginError(
         err instanceof ApiError && err.status === 401
-          ? "Wrong token — check ADMIN_TOKEN on the server."
+          ? "Invalid username or password."
           : "Could not reach the server. Is it running?"
       );
     } finally {
@@ -93,21 +96,34 @@ export default function AdminPage() {
           <Lock className="h-8 w-8 text-chili" aria-hidden />
           <h1 className="mt-3 font-display text-4xl uppercase tracking-[0.06em]">Counter admin</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink/60">
-            Staff only. Enter the admin token to manage orders, the menu and the
-            receipt printer.
+            Staff only. Sign in to manage orders, the menu and the receipt printer.
           </p>
           <label
-            htmlFor="admin-token"
+            htmlFor="admin-username"
             className="mb-1 mt-5 block font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60"
           >
-            Admin token
+            Username
           </label>
           <input
-            id="admin-token"
+            id="admin-username"
+            type="text"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full rounded-md border-2 border-ink/25 bg-cream px-3 py-2.5 text-sm text-ink focus:border-chili focus:outline-none"
+          />
+          <label
+            htmlFor="admin-password"
+            className="mb-1 mt-4 block font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60"
+          >
+            Password
+          </label>
+          <input
+            id="admin-password"
             type="password"
             autoComplete="current-password"
-            value={tokenInput}
-            onChange={(e) => setTokenInput(e.target.value)}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             className="w-full rounded-md border-2 border-ink/25 bg-cream px-3 py-2.5 text-sm text-ink focus:border-chili focus:outline-none"
           />
           {loginError && (
@@ -117,7 +133,7 @@ export default function AdminPage() {
           )}
           <button
             type="submit"
-            disabled={busy || !tokenInput.trim()}
+            disabled={busy || !username.trim() || !password}
             className="mt-5 w-full rounded-md bg-chili px-6 py-3 font-mono text-sm font-semibold uppercase tracking-[0.16em] text-cream transition-colors hover:bg-ember disabled:opacity-40"
           >
             {busy ? "Checking…" : "Sign in"}

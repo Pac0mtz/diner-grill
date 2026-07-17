@@ -14,6 +14,31 @@ export function clearAdminToken() {
   sessionStorage.removeItem(TOKEN_KEY);
 }
 
+export async function adminLogin(username: string, password: string): Promise<void> {
+  const res = await fetch("/api/admin/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  if (!res.ok) {
+    throw new ApiError(
+      res.status,
+      typeof data.error === "string" ? data.error : `Login failed (HTTP ${res.status})`
+    );
+  }
+  setAdminToken(String(data.token));
+}
+
+export async function adminLogout(): Promise<void> {
+  try {
+    await adminFetch("/api/admin/logout", { method: "POST" });
+  } catch {
+    // Session may already be gone — clearing locally is enough.
+  }
+  clearAdminToken();
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -44,9 +69,10 @@ export async function adminFetch<T = unknown>(
   return data as T;
 }
 
-/** created_at comes from SQLite as UTC "YYYY-MM-DD HH:MM:SS" — render Chicago time. */
+/** created_at is an ISO timestamp from PostgreSQL — render Chicago time. */
 export function formatOrderTime(createdAt: string): string {
-  const d = new Date(createdAt.replace(" ", "T") + "Z");
+  const iso = createdAt.includes("T") ? createdAt : createdAt.replace(" ", "T") + "Z";
+  const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return createdAt;
   return d.toLocaleString("en-US", {
     timeZone: "America/Chicago",
