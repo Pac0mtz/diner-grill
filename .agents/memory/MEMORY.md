@@ -1,0 +1,1 @@
+- [Backend conventions](backend-conventions.md) — server uses Replit Postgres (pg Pool, init in server/db.js); admin auth is username/password + DB sessions; ADMIN_TOKEN is only a static automation token.
