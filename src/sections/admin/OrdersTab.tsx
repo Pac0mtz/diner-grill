@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Printer, RefreshCw } from "lucide-react";
+import { Printer, RefreshCw, Volume2, VolumeX, ExternalLink, Mail } from "lucide-react";
 import type { AdminOrder, OrderStatus } from "../../lib/api-types";
 import { formatCents } from "../../lib/money";
+import { playOrderAlert } from "../../lib/order-alert";
 import { adminFetch, ApiError, formatOrderTime } from "./api";
 
 const STATUS_STYLES: Record<OrderStatus, string> = {
@@ -15,18 +16,29 @@ const STATUS_STYLES: Record<OrderStatus, string> = {
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   pending_payment: "Awaiting payment",
-  paid: "Paid",
-  preparing: "Preparing",
+  paid: "New · accept",
+  preparing: "Accepted",
   ready: "Ready",
   done: "Done",
   cancelled: "Cancelled",
 };
 
 const NEXT_STATUS: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
-  paid: { to: "preparing", label: "Fire it" },
+  paid: { to: "preparing", label: "Accept order" },
   preparing: { to: "ready", label: "Mark ready" },
   ready: { to: "done", label: "Complete" },
 };
+
+const ALL_STATUSES: OrderStatus[] = [
+  "pending_payment",
+  "paid",
+  "preparing",
+  "ready",
+  "done",
+  "cancelled",
+];
+
+const CAN_CANCEL: OrderStatus[] = ["pending_payment", "paid", "preparing", "ready"];
 
 const FILTERS: { id: string; label: string; match: (o: AdminOrder) => boolean }[] = [
   { id: "active", label: "Active", match: (o) => ["paid", "preparing", "ready"].includes(o.status) },
@@ -50,16 +62,38 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [freshIds, setFreshIds] = useState<Set<number>>(new Set());
+  const [soundOn, setSoundOn] = useState(true);
   const seenIds = useRef<Set<number> | null>(null);
+  const soundOnRef = useRef(true);
+
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+  }, [soundOn]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await adminFetch<{ order_alert_sound?: string }>("/api/admin/settings");
+        const on = s.order_alert_sound !== "0";
+        setSoundOn(on);
+        soundOnRef.current = on;
+      } catch {
+        /* keep default on */
+      }
+    })();
+  }, []);
 
   const load = useCallback(async () => {
     try {
       const data = await adminFetch<{ orders: AdminOrder[] }>("/api/admin/orders");
-      // Highlight orders that became visible (new) since the previous poll.
+      // Highlight + chime for orders that became visible (new) since the previous poll.
       if (seenIds.current !== null) {
         const fresh = new Set<number>();
         for (const o of data.orders) {
           if (!seenIds.current.has(o.id) && o.status === "paid") fresh.add(o.id);
+        }
+        if (fresh.size > 0 && soundOnRef.current) {
+          void playOrderAlert();
         }
         setFreshIds(fresh);
       }
@@ -79,7 +113,7 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
 
   useEffect(() => {
     load();
-    const timer = setInterval(load, 10_000);
+    const timer = setInterval(load, 8_000);
     return () => clearInterval(timer);
   }, [load]);
 
@@ -114,33 +148,76 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
     }
   }
 
+  async function resendEmail(id: number, kind: "receipt" | "accepted" | "ready" | "cancelled") {
+    setBusyId(id);
+    try {
+      const result = await adminFetch<{ ok?: boolean; skipped?: boolean; message?: string }>(
+        `/api/admin/orders/${id}/resend-email`,
+        { method: "POST", body: { kind } }
+      );
+      if (!result.ok) {
+        setError(result.message || "Could not send email.");
+      } else {
+        setError(null);
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return onUnauthorized();
+      setError(err instanceof Error ? err.message : "Could not send email.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const activeFilter = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
   const visible = orders.filter(activeFilter.match);
 
   return (
     <div>
-      <div className="mb-5 flex flex-wrap items-center gap-2">
-        {FILTERS.map((f) => (
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="flex flex-wrap gap-2">
+          {FILTERS.map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id)}
+              className={`rounded-full border-2 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors ${
+                filter === f.id
+                  ? "border-ink bg-ink text-cream"
+                  : "border-ink/25 text-ink/60 hover:border-ink hover:text-ink"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto">
           <button
-            key={f.id}
-            onClick={() => setFilter(f.id)}
-            className={`rounded-full border-2 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors ${
-              filter === f.id
-                ? "border-ink bg-ink text-cream"
-                : "border-ink/25 text-ink/60 hover:border-ink hover:text-ink"
+            type="button"
+            onClick={() => {
+              const next = !soundOn;
+              setSoundOn(next);
+              if (next) void playOrderAlert();
+            }}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md border-2 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors sm:flex-none sm:py-1.5 ${
+              soundOn
+                ? "border-chili/40 bg-chili/10 text-chili"
+                : "border-ink/25 text-ink/45 hover:border-ink hover:text-ink"
             }`}
+            aria-pressed={soundOn}
+            aria-label={soundOn ? "Mute order alert sound" : "Enable order alert sound"}
+            title={soundOn ? "Sound on — click to mute" : "Sound off — click to enable"}
           >
-            {f.label}
+            {soundOn ? <Volume2 className="h-3.5 w-3.5" aria-hidden /> : <VolumeX className="h-3.5 w-3.5" aria-hidden />}
+            {soundOn ? "Sound" : "Muted"}
           </button>
-        ))}
-        <button
-          onClick={load}
-          className="ml-auto flex items-center gap-1.5 rounded-md border-2 border-ink/25 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ink hover:text-ink"
-          aria-label="Refresh orders"
-        >
-          <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-          Refresh
-        </button>
+          <button
+            onClick={load}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-md border-2 border-ink/25 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ink hover:text-ink sm:flex-none sm:py-1.5"
+            aria-label="Refresh orders"
+          >
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -190,16 +267,32 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                 </div>
 
                 <p className="mt-3 text-sm font-semibold">
-                  {o.customer_name} <span className="font-normal text-ink/55">· {o.phone}</span>
+                  {o.customer_name}{" "}
+                  <span className="font-normal text-ink/55">· {o.phone}</span>
                 </p>
+                {o.customer_email && (
+                  <p className="mt-0.5 truncate font-mono text-[11px] text-ink/45">
+                    {o.customer_email}
+                  </p>
+                )}
 
-                <ul className="mt-3 space-y-1 border-t border-dashed border-ink/25 pt-3 text-sm">
+                <ul className="mt-3 space-y-1.5 border-t border-dashed border-ink/25 pt-3 text-sm">
                   {o.items.map((line, i) => (
-                    <li key={i} className="flex justify-between gap-3">
-                      <span>
-                        <span className="font-mono font-semibold">{line.qty}×</span> {line.name}
-                      </span>
-                      <span className="font-mono text-ink/60">{formatCents(line.price_cents * line.qty)}</span>
+                    <li key={i}>
+                      <div className="flex justify-between gap-3">
+                        <span>
+                          <span className="font-mono font-semibold">{line.qty}×</span> {line.name}
+                        </span>
+                        <span className="font-mono text-ink/60">{formatCents(line.price_cents * line.qty)}</span>
+                      </div>
+                      {line.modifiers && line.modifiers.length > 0 && (
+                        <p className="mt-0.5 pl-5 text-[12px] text-ink/50">
+                          {line.modifiers.map((m) => m.label).join(" · ")}
+                        </p>
+                      )}
+                      {line.line_note && (
+                        <p className="mt-0.5 pl-5 text-[12px] italic text-ink/45">“{line.line_note}”</p>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -214,6 +307,21 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                 </p>
                 <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/40">
                   Print: {o.print_status}
+                  {o.stripe_dashboard_url && (
+                    <>
+                      {" · "}
+                      <a
+                        href={o.stripe_dashboard_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-0.5 text-chili underline-offset-2 hover:underline"
+                        title={o.stripe_payment_intent ?? "Open in Stripe"}
+                      >
+                        Stripe
+                        <ExternalLink className="h-2.5 w-2.5" aria-hidden />
+                      </a>
+                    </>
+                  )}
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -226,9 +334,30 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                       {next.label}
                     </button>
                   )}
-                  {(o.status === "paid" || o.status === "pending_payment") && (
+                  {o.status === "cancelled" && (
                     <button
-                      onClick={() => updateStatus(o.id, "cancelled")}
+                      onClick={() => updateStatus(o.id, "paid")}
+                      disabled={busyId === o.id}
+                      className="flex-1 rounded-md bg-ink px-3 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-cream transition-colors hover:bg-chili disabled:opacity-40"
+                    >
+                      Reopen
+                    </button>
+                  )}
+                  {o.status === "done" && (
+                    <button
+                      onClick={() => updateStatus(o.id, "ready")}
+                      disabled={busyId === o.id}
+                      className="rounded-md border-2 border-ink/30 px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+                    >
+                      Reopen to ready
+                    </button>
+                  )}
+                  {CAN_CANCEL.includes(o.status) && (
+                    <button
+                      onClick={() => {
+                        if (!window.confirm(`Cancel order ${o.order_number}?`)) return;
+                        updateStatus(o.id, "cancelled");
+                      }}
                       disabled={busyId === o.id}
                       className="rounded-md border-2 border-ink/30 px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
                     >
@@ -245,7 +374,45 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                       Reprint
                     </button>
                   )}
+                  {o.customer_email && o.status !== "pending_payment" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const kind =
+                          o.status === "cancelled"
+                            ? "cancelled"
+                            : o.status === "ready" || o.status === "done"
+                              ? "ready"
+                              : o.status === "preparing"
+                                ? "accepted"
+                                : "receipt";
+                        void resendEmail(o.id, kind);
+                      }}
+                      disabled={busyId === o.id}
+                      className="flex items-center gap-1.5 rounded-md border-2 border-ink/30 px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+                      title={`Resend email to ${o.customer_email}`}
+                    >
+                      <Mail className="h-3.5 w-3.5" aria-hidden />
+                      Email
+                    </button>
+                  )}
                 </div>
+                <label className="mt-3 flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/45">
+                  <span className="shrink-0">Set status</span>
+                  <select
+                    value={o.status}
+                    disabled={busyId === o.id}
+                    onChange={(e) => updateStatus(o.id, e.target.value as OrderStatus)}
+                    className="min-w-0 flex-1 rounded-md border border-ink/20 bg-cream px-2 py-1.5 text-[11px] tracking-[0.08em] text-ink focus:border-chili focus:outline-none disabled:opacity-40"
+                    aria-label={`Set status for ${o.order_number}`}
+                  >
+                    {ALL_STATUSES.map((s) => (
+                      <option key={s} value={s}>
+                        {STATUS_LABELS[s]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </article>
             );
           })}

@@ -4,22 +4,33 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Diner Grill — Chicago's 24-Hour Diner Since 1937 | Home of the Slinger</title>
-    <meta name="description" content="Diner Grill is Chicago's legendary 24-hour counter diner in Lakeview, serving scratch-made breakfast, burgers, skillets and the famous Slinger since 1937. 1635 W Irving Park Rd. Open 24 hours." />
+    <meta name="description" content="Diner Grill is Chicago's legendary 24-hour counter diner in Lakeview, serving scratch-made breakfast, burgers, skillets and the famous Slinger since 1937. Open 24 hours at 1635 W Irving Park Rd." />
     <meta name="keywords" content="diner chicago, 24 hour diner chicago, Diner Grill, the slinger, late night food chicago, lakeview diner, breakfast chicago, irving park restaurant" />
     <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
     <meta name="author" content="Diner Grill" />
     <meta name="theme-color" content="#17130f" />
+    <meta name="format-detection" content="telephone=yes" />
+    <meta name="geo.region" content="US-IL" />
+    <meta name="geo.placename" content="Chicago" />
+    <meta name="geo.position" content="41.9541;-87.6715" />
+    <meta name="ICBM" content="41.9541, -87.6715" />
     <link rel="canonical" href="https://dinergrill.com/" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+    <!-- Manifest is injected only on /admin for staff PWA install -->
 
     <!-- Open Graph -->
-    <meta property="og:type" content="restaurant" />
+    <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Diner Grill" />
     <meta property="og:title" content="Diner Grill — Chicago's 24-Hour Diner Since 1937" />
     <meta property="og:description" content="Built. Broken. Rebuilt. The legendary 24-hour counter diner on Irving Park Rd — home of the famous Slinger. Open 24 hours, 365 days." />
     <meta property="og:url" content="https://dinergrill.com/" />
     <meta property="og:image" content="https://dinergrill.com/og-image.png" />
+    <meta property="og:image:secure_url" content="https://dinergrill.com/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Diner Grill — Chicago's 24-Hour Diner Since 1937" />
     <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
@@ -27,6 +38,7 @@
     <meta name="twitter:title" content="Diner Grill — Chicago's 24-Hour Diner Since 1937" />
     <meta name="twitter:description" content="Home of the Slinger. Scratch-made diner classics, 24 hours a day at 1635 W Irving Park Rd, Chicago." />
     <meta name="twitter:image" content="https://dinergrill.com/og-image.png" />
+    <meta name="twitter:image:alt" content="Diner Grill — Chicago's 24-Hour Diner Since 1937" />
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
@@ -36,39 +48,64 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
-    <!-- Structured data: Restaurant -->
-    <script type="application/ld+json">
+    <!-- Structured data -->
+    <script type="application/ld+json" id="seo-jsonld">
     {
       "@context": "https://schema.org",
-      "@type": "Restaurant",
-      "name": "Diner Grill",
-      "alternateName": "The Diner Grill",
-      "description": "Legendary 24-hour counter diner in Lakeview, Chicago. Home of the Slinger. Serving scratch-made American diner classics since 1937.",
-      "servesCuisine": ["American", "Diner", "Breakfast", "Burgers"],
-      "priceRange": "$",
-      "telephone": "+1-773-248-2030",
-      "url": "https://dinergrill.com/",
-      "foundingDate": "1937",
-      "acceptsReservations": "False",
-      "address": {
-        "@type": "PostalAddress",
-        "streetAddress": "1635 W Irving Park Rd",
-        "addressLocality": "Chicago",
-        "addressRegion": "IL",
-        "postalCode": "60613",
-        "addressCountry": "US"
-      },
-      "geo": {
-        "@type": "GeoCoordinates",
-        "latitude": 41.9541,
-        "longitude": -87.6715
-      },
-      "openingHoursSpecification": {
-        "@type": "OpeningHoursSpecification",
-        "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-        "opens": "00:00",
-        "closes": "23:59"
-      }
+      "@graph": [
+        {
+          "@type": "Restaurant",
+          "@id": "https://dinergrill.com/#restaurant",
+          "name": "Diner Grill",
+          "alternateName": "The Diner Grill",
+          "description": "Legendary 24-hour counter diner in Lakeview, Chicago. Home of the Slinger. Serving scratch-made American diner classics since 1937.",
+          "image": ["https://dinergrill.com/og-image.png"],
+          "servesCuisine": ["American", "Diner", "Breakfast", "Burgers"],
+          "priceRange": "$",
+          "telephone": "+1-773-248-2030",
+          "url": "https://dinergrill.com/",
+          "foundingDate": "1937",
+          "acceptsReservations": false,
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": "1635 W Irving Park Rd",
+            "addressLocality": "Chicago",
+            "addressRegion": "IL",
+            "postalCode": "60613",
+            "addressCountry": "US"
+          },
+          "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": 41.9541,
+            "longitude": -87.6715
+          },
+          "openingHoursSpecification": {
+            "@type": "OpeningHoursSpecification",
+            "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+            "opens": "00:00",
+            "closes": "23:59"
+          },
+          "hasMap": "https://www.google.com/maps/search/?api=1&query=1635%20W%20Irving%20Park%20Rd%2C%20Chicago%2C%20IL%2060613",
+          "aggregateRating": {
+            "@type": "AggregateRating",
+            "ratingValue": 4.6,
+            "reviewCount": 813,
+            "bestRating": 5,
+            "worstRating": 1
+          },
+          "sameAs": [
+            "https://www.google.com/maps/search/?api=1&query=Diner+Grill+1635+W+Irving+Park+Rd+Chicago+IL"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://dinergrill.com/#website",
+          "name": "Diner Grill",
+          "url": "https://dinergrill.com/",
+          "publisher": { "@id": "https://dinergrill.com/#restaurant" },
+          "inLanguage": "en"
+        }
+      ]
     }
     </script>
   </head>

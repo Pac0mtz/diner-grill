@@ -67,28 +67,15 @@ export default function Visit() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <div className="overflow-hidden rounded-lg border-2 border-cream/15 shadow-ticket">
-              <iframe
-                title="Map to Diner Grill, 1635 W Irving Park Rd, Chicago"
-                src="https://maps.google.com/maps?q=Diner%20Grill%2C%201635%20W%20Irving%20Park%20Rd%2C%20Chicago%2C%20IL%2060613&t=&z=15&ie=UTF8&iwloc=&output=embed"
-                className="h-[380px] w-full grayscale-[35%] contrast-[1.05]"
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
-            </div>
-            <figure className="relative overflow-hidden rounded-lg border-2 border-cream/15 shadow-ticket">
-              <img
-                src="/photos/patio-2.jpg"
-                alt="The Diner Grill garden patio with hanging wisteria and outdoor tables"
-                loading="lazy"
-                className="aspect-[16/9] w-full object-cover"
-              />
-              <figcaption className="absolute bottom-3 left-3 rounded-sm bg-ink/85 px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.18em] text-mustard">
-                The garden patio · out back, weather permitting
-              </figcaption>
-            </figure>
+          <div className="overflow-hidden rounded-lg border-2 border-cream/15 shadow-ticket">
+            <iframe
+              title="Map to Diner Grill, 1635 W Irving Park Rd, Chicago"
+              src="https://maps.google.com/maps?q=Diner%20Grill%2C%201635%20W%20Irving%20Park%20Rd%2C%20Chicago%2C%20IL%2060613&z=15&ie=UTF8&iwloc=&output=embed"
+              className="h-[420px] w-full border-0 lg:h-[520px] [filter:invert(92%)_hue-rotate(180deg)_brightness(0.95)_contrast(0.9)]"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              allowFullScreen
+            />
           </div>
         </div>
       </div>

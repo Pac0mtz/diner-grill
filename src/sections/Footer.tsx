@@ -25,6 +25,8 @@ export default function Footer() {
           <Link to="/" className="transition-colors hover:text-mustard">Home</Link>
           <Link to="/story" className="transition-colors hover:text-mustard">Story</Link>
           <Link to="/menu" className="transition-colors hover:text-mustard">Menu</Link>
+          <Link to="/gallery" className="transition-colors hover:text-mustard">Gallery</Link>
+          <Link to="/reviews" className="transition-colors hover:text-mustard">Reviews</Link>
           <Link to="/visit" className="transition-colors hover:text-mustard">Visit</Link>
           <Link to={SITE.orderUrl} className="text-mustard transition-colors hover:text-cream">
             Order Online

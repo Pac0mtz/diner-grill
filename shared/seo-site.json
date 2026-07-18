@@ -1,0 +1,26 @@
+{
+  "name": "Diner Grill",
+  "shortName": "Diner Grill",
+  "url": "https://dinergrill.com",
+  "locale": "en_US",
+  "lang": "en",
+  "twitter": "",
+  "phone": "+1-773-248-2030",
+  "phoneDisplay": "(773) 248-2030",
+  "email": "",
+  "ogImage": "https://dinergrill.com/og-image.png",
+  "ogImageWidth": 1200,
+  "ogImageHeight": 630,
+  "themeColor": "#17130f",
+  "address": {
+    "street": "1635 W Irving Park Rd",
+    "city": "Chicago",
+    "region": "IL",
+    "postal": "60613",
+    "country": "US"
+  },
+  "geo": { "latitude": 41.9541, "longitude": -87.6715 },
+  "foundingDate": "1937",
+  "ratingValue": 4.6,
+  "reviewCount": 813
+}

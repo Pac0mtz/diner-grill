@@ -1,18 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { HOME_GALLERY_PHOTOS } from "../data/gallery";
 
-const PHOTOS = [
-  { src: "/photos/pancakes.jpg", alt: "Stack of buttermilk pancakes with butter and syrup" },
-  { src: "/photos/burger-shake.jpg", alt: "Cheeseburger with a milkshake at the Diner Grill counter" },
-  { src: "/photos/wings.jpg", alt: "Buffalo wings fresh off the grill" },
-  { src: "/photos/skillet-eggs.jpg", alt: "Skillet topped with sunny-side eggs" },
-  { src: "/photos/waffle.jpg", alt: "Belgian waffle with whipped cream and chocolate drizzle" },
-  { src: "/photos/melt.jpg", alt: "Griddled sandwich melt with pickles" },
-  { src: "/photos/pancakes-coffee.jpg", alt: "Pancakes and black coffee on the patio" },
-  { src: "/photos/sandwich.jpg", alt: "Ham and egg breakfast sandwich on French bread" },
-  { src: "/photos/patio-7.jpg", alt: "Sunflowers and signs on the garden patio tree" },
-  { src: "/photos/patio-5.jpg", alt: "Hanging wisteria over the garden patio tables" },
-];
+const PHOTOS = HOME_GALLERY_PHOTOS;
 
 export default function Gallery() {
   const [active, setActive] = useState<number | null>(null);
@@ -45,31 +36,46 @@ export default function Gallery() {
           <h2 id="gallery-heading" className="headline text-5xl text-cream md:text-7xl">
             From the <span className="text-mustard">griddle</span>
           </h2>
-          <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-cream/50">
-            Real plates. Real counter. Tap a photo to look closer.
-          </p>
+          <div className="flex flex-col items-start gap-3 sm:items-end">
+            <p className="font-mono text-[12px] uppercase tracking-[0.22em] text-cream/50">
+              Real plates. Real counter. Tap a photo to look closer.
+            </p>
+            <Link
+              to="/gallery"
+              className="font-mono text-[12px] uppercase tracking-[0.18em] text-mustard transition-colors hover:text-cream"
+            >
+              See full gallery →
+            </Link>
+          </div>
         </div>
       </div>
 
-      <div className="mt-10 flex gap-5 overflow-x-auto px-5 pb-4 [scrollbar-width:thin] md:px-8">
-        {PHOTOS.map((p, i) => (
-          <button
-            key={p.src}
-            onClick={() => setActive(i)}
-            aria-label={`Enlarge photo: ${p.alt}`}
-            className={`w-64 shrink-0 rounded-md border-4 border-cream/90 bg-cream p-2 text-left shadow-ticket transition-transform duration-300 hover:-translate-y-2 hover:rotate-0 md:w-72 ${
-              i % 2 === 0 ? "-rotate-1" : "rotate-1"
-            }`}
-          >
-            <img src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/3] w-full rounded-sm object-cover" />
-            <span className="block px-1 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink/55">
-              {p.alt}
-            </span>
-          </button>
-        ))}
+      <div className="group mt-10 overflow-hidden py-[30px] md:py-10 motion-reduce:overflow-x-auto motion-reduce:[scrollbar-width:thin]">
+        <div
+          className={`flex w-max gap-5 pr-5 md:gap-7 ${
+            active === null
+              ? "animate-marquee [animation-duration:55s] group-hover:[animation-play-state:paused] motion-reduce:animate-none md:[animation-duration:70s]"
+              : "animate-marquee [animation-duration:55s] [animation-play-state:paused] md:[animation-duration:70s]"
+          }`}
+        >
+          {[...PHOTOS, ...PHOTOS].map((p, i) => (
+            <button
+              key={`${p.src}-${i}`}
+              onClick={() => setActive(i % PHOTOS.length)}
+              aria-label={`Enlarge photo: ${p.alt}`}
+              className={`w-64 shrink-0 rounded-md border-4 border-cream/90 bg-cream p-2 text-left shadow-ticket transition-transform duration-300 hover:-translate-y-2 hover:rotate-0 md:w-[22rem] md:p-3 lg:w-[26rem] ${
+                i % 2 === 0 ? "-rotate-1" : "rotate-1"
+              }`}
+            >
+              <img src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/3] w-full rounded-sm object-cover" />
+              <span className="block px-1 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink/55">
+                {p.alt}
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* lightbox */}
       {active !== null && (
         <div
           role="dialog"
@@ -87,14 +93,20 @@ export default function Gallery() {
           </button>
 
           <button
-            onClick={(e) => { e.stopPropagation(); step(-1); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              step(-1);
+            }}
             aria-label="Previous photo"
             className="absolute left-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-cream/30 text-cream transition-colors hover:border-mustard hover:text-mustard md:left-6"
           >
             <ChevronLeft className="h-5 w-5" aria-hidden />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); step(1); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              step(1);
+            }}
             aria-label="Next photo"
             className="absolute right-3 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full border border-cream/30 text-cream transition-colors hover:border-mustard hover:text-mustard md:right-6"
           >
@@ -102,7 +114,7 @@ export default function Gallery() {
           </button>
 
           <figure
-            className="stamp-in max-w-4xl rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket"
+            className="max-w-4xl rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket"
             onClick={(e) => e.stopPropagation()}
           >
             <img
@@ -112,7 +124,9 @@ export default function Gallery() {
             />
             <figcaption className="flex items-center justify-between px-1 pb-1 pt-3 font-mono text-[11px] uppercase tracking-[0.18em] text-ink/60">
               <span>{PHOTOS[active].alt}</span>
-              <span>{active + 1} / {PHOTOS.length}</span>
+              <span>
+                {active + 1} / {PHOTOS.length}
+              </span>
             </figcaption>
           </figure>
         </div>

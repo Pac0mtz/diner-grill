@@ -1,14 +1,6 @@
 // Epson ePOS-Print receipt builder + printer transport.
 // Dependency-free: uses global fetch (Node 18+).
-
-const RESTAURANT = {
-  name: "DINER GRILL",
-  address: "1635 W Irving Park Rd, Chicago, IL 60613",
-  phone: "(773) 248-2030",
-};
-
-// ~42 chars per line at Font A on an 80mm TM printer.
-const WIDTH = 42;
+import { buildReceiptPrintRows, getReceiptTemplate } from "./receipt-template.js";
 
 function esc(s) {
   return String(s)
@@ -18,65 +10,13 @@ function esc(s) {
     .replace(/"/g, "&quot;");
 }
 
-function cents(c) {
-  return "$" + (c / 100).toFixed(2);
-}
-
-function line(left, right = "") {
-  left = String(left);
-  right = String(right);
-  if (!right) return left.slice(0, WIDTH);
-  const space = WIDTH - left.length - right.length;
-  if (space < 1) return (left.slice(0, WIDTH - right.length - 1) + " " + right).slice(0, WIDTH);
-  return left + " ".repeat(space) + right;
-}
-
-function rule(ch = "-") {
-  return ch.repeat(WIDTH);
-}
-
 /**
  * Build the inner <epos-print> XML document for an order.
- * order: { order_number, customer_name, phone, notes, items: [{name, qty, price_cents}],
- *          subtotal_cents, tax_cents, total_cents, created_at? }
+ * Uses the editable receipt template (Epson 42-col defaults).
  */
-export function buildReceiptXml(order) {
-  const lines = [];
-  lines.push({ text: RESTAURANT.name, align: "center", dw: true, dh: true });
-  lines.push({ text: RESTAURANT.address, align: "center" });
-  lines.push({ text: RESTAURANT.phone, align: "center" });
-  lines.push({ text: rule("=") });
-  lines.push({ text: `ORDER ${order.order_number}`, align: "center", dw: true, dh: true });
-  lines.push({
-    text: new Date(order.created_at ? order.created_at + " UTC" : Date.now()).toLocaleString("en-US", {
-      timeZone: "America/Chicago",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
-    align: "center",
-  });
-  lines.push({ text: rule() });
-  lines.push({ text: `Name: ${order.customer_name}` });
-  if (order.phone) lines.push({ text: `Phone: ${order.phone}` });
-  lines.push({ text: rule() });
-
-  for (const it of order.items || []) {
-    lines.push({ text: line(`${it.qty} x ${it.name}`, cents(it.price_cents * it.qty)) });
-  }
-  if (order.notes) {
-    lines.push({ text: rule() });
-    lines.push({ text: `NOTES: ${order.notes}` });
-  }
-  lines.push({ text: rule() });
-  lines.push({ text: line("Subtotal", cents(order.subtotal_cents)) });
-  lines.push({ text: line("Tax (10.25%)", cents(order.tax_cents)) });
-  lines.push({ text: line("TOTAL", cents(order.total_cents)), em: true });
-  lines.push({ text: rule("=") });
-  lines.push({ text: "Thank you!", align: "center", dw: true, dh: true });
-  lines.push({ text: "Show this ticket at the counter", align: "center" });
+export async function buildReceiptXml(order, template) {
+  const t = template || (await getReceiptTemplate());
+  const lines = buildReceiptPrintRows(order, t);
 
   const body = lines
     .map((l) => {
@@ -126,7 +66,6 @@ export async function printToPrinter(ip, deviceId, xml, { timeoutMs = 10000 } = 
       signal: controller.signal,
     });
     const body = await res.text();
-    // Epson returns 200 with success="true"/"false" in the response XML.
     const ok = res.ok && !/success="false"/.test(body);
     return { ok, status: res.status, body: body.slice(0, 500) };
   } catch (err) {

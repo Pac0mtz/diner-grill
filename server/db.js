@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS admin_users (
 
 ALTER TABLE orders ADD COLUMN IF NOT EXISTS print_claimed_at TIMESTAMPTZ;
 
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_email TEXT;
+
 ALTER TABLE items ADD COLUMN IF NOT EXISTS image TEXT;
 
 CREATE TABLE IF NOT EXISTS admin_sessions (
@@ -78,6 +80,40 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   user_id INTEGER NOT NULL REFERENCES admin_users(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS customers (
+  id SERIAL PRIMARY KEY,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  marketing_opt_in BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS customer_sessions (
+  token TEXT PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  token TEXT PRIMARY KEY,
+  customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id INTEGER REFERENCES customers(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS marketing_subscribers (
+  email TEXT PRIMARY KEY,
+  name TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT 'checkout',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 `);
 }

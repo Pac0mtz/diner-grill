@@ -1,0 +1,115 @@
+[
+  {
+    "path": "/",
+    "title": "Diner Grill — Chicago's 24-Hour Diner Since 1937 | Home of the Slinger",
+    "description": "Diner Grill is Chicago's legendary 24-hour counter diner in Lakeview, serving scratch-made breakfast, burgers, skillets and the famous Slinger since 1937. Open 24 hours at 1635 W Irving Park Rd.",
+    "ogTitle": "Diner Grill — Chicago's 24-Hour Diner Since 1937",
+    "ogDescription": "Built. Broken. Rebuilt. The legendary 24-hour counter diner on Irving Park Rd — home of the famous Slinger. Open 24 hours, 365 days.",
+    "keywords": "diner chicago, 24 hour diner chicago, Diner Grill, the slinger, late night food chicago, lakeview diner, breakfast chicago, irving park restaurant",
+    "changefreq": "weekly",
+    "priority": 1.0,
+    "ogType": "website"
+  },
+  {
+    "path": "/story",
+    "title": "Our Story — Built. Broken. Rebuilt. | Diner Grill, Chicago",
+    "description": "From a 1937 trolley-car diner to the Christmas Eve fire of 2016 and the 2018 rebuild — the eight-decade story of Chicago's Diner Grill on Irving Park Road.",
+    "ogTitle": "Our Story — Built. Broken. Rebuilt. | Diner Grill",
+    "ogDescription": "1937 trolley diner. 2016 fire. 2018 rebuild. The true story of Chicago's Diner Grill — home of the Slinger.",
+    "keywords": "diner grill history, chicago diner fire, slinger chicago, lakeview diner story",
+    "changefreq": "yearly",
+    "priority": 0.75
+  },
+  {
+    "path": "/menu",
+    "title": "Menu — Breakfast, Skillets, Burgers & the Slinger | Diner Grill, Chicago",
+    "description": "Full Diner Grill menu: all-day breakfast, omelettes, skillets, pancakes, thin griddled burgers and the famous Slinger. Served 24 hours in Lakeview, Chicago.",
+    "ogTitle": "Menu | Diner Grill — Breakfast, Burgers & the Slinger",
+    "ogDescription": "All-day breakfast, skillets, thin burgers, and Chicago's famous Slinger. Full menu served 24 hours.",
+    "keywords": "diner grill menu, slinger chicago, breakfast chicago, skillets, omelettes, burgers lakeview",
+    "changefreq": "weekly",
+    "priority": 0.95
+  },
+  {
+    "path": "/visit",
+    "title": "Visit — Open 24 Hours at 1635 W Irving Park Rd | Diner Grill, Chicago",
+    "description": "Find Diner Grill at 1635 W Irving Park Rd, Chicago, IL 60613. Open 24 hours, 365 days. Counter seating, garden patio, call (773) 248-2030.",
+    "ogTitle": "Visit Diner Grill — Open 24 Hours in Lakeview",
+    "ogDescription": "1635 W Irving Park Rd, Chicago. Counter seating, garden patio, open 24/365. Call (773) 248-2030.",
+    "keywords": "diner grill address, 1635 irving park, 24 hour restaurant chicago, lakeview diner hours",
+    "changefreq": "monthly",
+    "priority": 0.9
+  },
+  {
+    "path": "/gallery",
+    "title": "Gallery — Food, Patio & the Counter | Diner Grill, Chicago",
+    "description": "Photos from Diner Grill in Lakeview: plates from the griddle, the garden patio, and the 24-hour counter on Irving Park Road.",
+    "ogTitle": "Gallery | Diner Grill Chicago",
+    "ogDescription": "Plates from the griddle, the garden patio, and the 24-hour counter — photos from Diner Grill in Lakeview.",
+    "keywords": "diner grill photos, chicago diner food, slinger photo, lakeview patio",
+    "changefreq": "monthly",
+    "priority": 0.7
+  },
+  {
+    "path": "/reviews",
+    "title": "Reviews — What Chicago Says About Diner Grill",
+    "description": "Google reviews for Diner Grill on Irving Park Road: 4.6 stars for the Slinger, late-night breakfast, and the 24-hour counter in Lakeview, Chicago.",
+    "ogTitle": "Reviews | Diner Grill — 4.6 Stars on Google",
+    "ogDescription": "What Chicago says about the Slinger, late-night breakfast, and the counter that never closes.",
+    "keywords": "diner grill reviews, best diner chicago, slinger reviews, lakeview restaurant reviews",
+    "changefreq": "weekly",
+    "priority": 0.8
+  },
+  {
+    "path": "/order",
+    "title": "Order Online — Pickup at the Counter | Diner Grill, Chicago",
+    "description": "Order Diner Grill online for counter pickup: all-day breakfast, skillets, burgers and the famous Slinger. Open 24 hours on Irving Park Rd, Chicago.",
+    "ogTitle": "Order Online | Diner Grill Chicago",
+    "ogDescription": "Order breakfast, burgers, and the famous Slinger online for counter pickup. Open 24 hours.",
+    "keywords": "order diner grill, online order chicago diner, pickup breakfast lakeview, order slinger",
+    "changefreq": "weekly",
+    "priority": 0.9
+  },
+  {
+    "path": "/admin",
+    "title": "Counter Admin | Diner Grill",
+    "description": "Staff-only counter admin for Diner Grill orders and menu.",
+    "robots": "noindex, nofollow",
+    "inSitemap": false
+  },
+  {
+    "path": "/account",
+    "title": "Your Account | Diner Grill",
+    "description": "Manage your Diner Grill account, order history, and email offer preferences.",
+    "robots": "noindex, nofollow",
+    "inSitemap": false
+  },
+  {
+    "path": "/account/login",
+    "title": "Sign In | Diner Grill",
+    "description": "Sign in to your Diner Grill account for faster ordering and order history.",
+    "robots": "noindex, nofollow",
+    "inSitemap": false
+  },
+  {
+    "path": "/account/register",
+    "title": "Create Account | Diner Grill",
+    "description": "Create a Diner Grill account for faster checkout, order history, and optional email offers.",
+    "robots": "noindex, nofollow",
+    "inSitemap": false
+  },
+  {
+    "path": "/account/forgot",
+    "title": "Forgot Password | Diner Grill",
+    "description": "Reset your Diner Grill account password.",
+    "robots": "noindex, nofollow",
+    "inSitemap": false
+  },
+  {
+    "path": "/account/reset",
+    "title": "Reset Password | Diner Grill",
+    "description": "Choose a new password for your Diner Grill account.",
+    "robots": "noindex, nofollow",
+    "inSitemap": false
+  }
+]

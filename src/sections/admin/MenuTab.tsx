@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { ImagePlus, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
+import { ImageMinus, ImagePlus, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
 import type { AdminItem, AdminSection } from "../../lib/api-types";
 import { dollarsToCents, formatCents } from "../../lib/money";
 import { adminFetch, ApiError } from "./api";
@@ -18,16 +18,39 @@ function centsToDollars(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      resolve(result.includes(",") ? result.split(",")[1] : result);
+    };
+    reader.onerror = () => reject(new Error("Could not read that file."));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadImageFile(file: File): Promise<string> {
+  const dataBase64 = await fileToBase64(file);
+  const uploaded = await adminFetch<{ url: string }>("/api/admin/upload", {
+    method: "POST",
+    body: { filename: file.name, dataBase64 },
+  });
+  return uploaded.url;
+}
+
 /* ------------------------------------------------------------------ */
 /* Item row (view / inline edit)                                       */
 /* ------------------------------------------------------------------ */
 
 function ItemRow({
   item,
+  sections,
   onSaved,
   onUnauthorized,
 }: {
   item: AdminItem;
+  sections: AdminMenuSection[];
   onSaved: () => void;
   onUnauthorized: () => void;
 }) {
@@ -37,6 +60,7 @@ function ItemRow({
   const [description, setDescription] = useState(item.description ?? "");
   const [tag, setTag] = useState(item.tag ?? "");
   const [sort, setSort] = useState(String(item.sort));
+  const [sectionId, setSectionId] = useState(String(item.section_id));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -47,6 +71,7 @@ function ItemRow({
     setDescription(item.description ?? "");
     setTag(item.tag ?? "");
     setSort(String(item.sort));
+    setSectionId(String(item.section_id));
     setError(null);
     setEditing(true);
   }
@@ -64,12 +89,15 @@ function ItemRow({
     const cents = dollarsToCents(price);
     if (!name.trim()) return setError("Name is required.");
     if (cents === null) return setError("Price must be a valid dollar amount.");
+    const nextSection = Number(sectionId);
+    if (!Number.isInteger(nextSection)) return setError("Pick a section.");
     setBusy(true);
     setError(null);
     try {
       await adminFetch(`/api/admin/items/${item.id}`, {
         method: "PUT",
         body: {
+          section_id: nextSection,
           name: name.trim(),
           price_cents: cents,
           description: description.trim() || null,
@@ -118,22 +146,28 @@ function ItemRow({
     setBusy(true);
     setError(null);
     try {
-      const dataBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = String(reader.result ?? "");
-          resolve(result.includes(",") ? result.split(",")[1] : result);
-        };
-        reader.onerror = () => reject(new Error("Could not read that file."));
-        reader.readAsDataURL(file);
-      });
-      const uploaded = await adminFetch<{ url: string }>("/api/admin/upload", {
-        method: "POST",
-        body: { filename: file.name, dataBase64 },
-      });
+      const url = await uploadImageFile(file);
       await adminFetch(`/api/admin/items/${item.id}`, {
         method: "PUT",
-        body: { image: uploaded.url },
+        body: { image: url },
+      });
+      onSaved();
+    } catch (err) {
+      await handleError(err);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removePhoto() {
+    if (!item.image) return;
+    if (!window.confirm(`Remove photo from “${item.name}”?`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await adminFetch(`/api/admin/items/${item.id}`, {
+        method: "PUT",
+        body: { image: null },
       });
       onSaved();
     } catch (err) {
@@ -151,80 +185,104 @@ function ItemRow({
 
   if (!editing) {
     return (
-      <li className={`flex flex-wrap items-center gap-3 rounded-md border px-3 py-2.5 ${item.available ? "border-ink/15 bg-cream/60" : "border-ink/10 bg-ink/5 opacity-60"}`}>
-        {item.image ? (
-          <img
-            src={item.image}
-            alt={item.name}
-            loading="lazy"
-            className="h-12 w-12 shrink-0 rounded-md border-2 border-ink/15 object-cover"
-          />
-        ) : (
-          <span
-            className="grid h-12 w-12 shrink-0 place-items-center rounded-md border-2 border-dashed border-ink/20 text-ink/30"
-            title="No photo yet"
-            aria-label="No photo yet"
-          >
-            <UtensilsCrossed className="h-5 w-5" aria-hidden />
-          </span>
-        )}
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-semibold">
-            {item.name}
-            {item.tag && (
-              <span className="ml-2 rounded-sm bg-ink px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-cream">
-                {item.tag}
-              </span>
-            )}
-          </span>
-          {item.description && (
-            <span className="block truncate text-xs text-ink/55">{item.description}</span>
+      <li
+        className={`rounded-md border px-3 py-2.5 ${
+          item.available ? "border-ink/15 bg-cream/60" : "border-ink/10 bg-ink/5 opacity-60"
+        }`}
+      >
+        <div className="flex items-start gap-3">
+          {item.image ? (
+            <img
+              src={item.image}
+              alt={item.name}
+              loading="lazy"
+              className="h-12 w-12 shrink-0 rounded-md border-2 border-ink/15 object-cover"
+            />
+          ) : (
+            <span
+              className="grid h-12 w-12 shrink-0 place-items-center rounded-md border-2 border-dashed border-ink/20 text-ink/30"
+              title="No photo yet"
+              aria-label="No photo yet"
+            >
+              <UtensilsCrossed className="h-5 w-5" aria-hidden />
+            </span>
           )}
-        </span>
-        <span className="font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
-        <label className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/60">
-          <input
-            type="checkbox"
-            checked={!!item.available}
-            onChange={toggleAvailable}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <span className="min-w-0">
+                <span className="block truncate text-sm font-semibold">
+                  {item.name}
+                  {item.tag && (
+                    <span className="ml-2 rounded-sm bg-ink px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-cream">
+                      {item.tag}
+                    </span>
+                  )}
+                </span>
+                {item.description && (
+                  <span className="mt-0.5 block truncate text-xs text-ink/55">{item.description}</span>
+                )}
+              </span>
+              <span className="shrink-0 font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-ink/10 pt-2.5 sm:justify-end">
+          <label className="mr-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/60 sm:mr-0">
+            <input
+              type="checkbox"
+              checked={!!item.available}
+              onChange={toggleAvailable}
+              disabled={busy}
+              className="h-4 w-4 accent-chili"
+            />
+            On menu
+          </label>
+          <button
+            onClick={() => fileRef.current?.click()}
             disabled={busy}
-            className="h-4 w-4 accent-chili"
+            className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-chili hover:text-chili disabled:opacity-40"
+            aria-label={item.image ? `Replace photo for ${item.name}` : `Upload photo for ${item.name}`}
+            title={item.image ? "Replace photo" : "Upload photo"}
+          >
+            <ImagePlus className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          {item.image && (
+            <button
+              onClick={removePhoto}
+              disabled={busy}
+              className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
+              aria-label={`Remove photo for ${item.name}`}
+              title="Remove photo"
+            >
+              <ImageMinus className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="hidden"
+            onChange={handleFile}
+            aria-hidden
           />
-          On menu
-        </label>
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={busy}
-          className="grid h-8 w-8 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-chili hover:text-chili disabled:opacity-40"
-          aria-label={`Upload photo for ${item.name}`}
-          title="Upload photo"
-        >
-          <ImagePlus className="h-3.5 w-3.5" aria-hidden />
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="hidden"
-          onChange={handleFile}
-          aria-hidden
-        />
-        <button
-          onClick={startEdit}
-          className="grid h-8 w-8 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ink hover:text-ink"
-          aria-label={`Edit ${item.name}`}
-        >
-          <Pencil className="h-3.5 w-3.5" aria-hidden />
-        </button>
-        <button
-          onClick={remove}
-          disabled={busy}
-          className="grid h-8 w-8 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
-          aria-label={`Delete ${item.name}`}
-        >
-          <Trash2 className="h-3.5 w-3.5" aria-hidden />
-        </button>
-        {error && <p role="alert" className="w-full text-xs font-medium text-ember">{error}</p>}
+          <button
+            onClick={startEdit}
+            className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ink hover:text-ink"
+            aria-label={`Edit ${item.name}`}
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          <button
+            onClick={remove}
+            disabled={busy}
+            className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
+            aria-label={`Delete ${item.name}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
+        {error && <p role="alert" className="mt-2 text-xs font-medium text-ember">{error}</p>}
       </li>
     );
   }
@@ -245,20 +303,74 @@ function ItemRow({
         <label className={labelClass} htmlFor={`item-desc-${item.id}`}>Description</label>
         <input id={`item-desc-${item.id}`} className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} />
       </div>
-      <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_80px]">
-        <div>
-          <label className={labelClass} htmlFor={`item-tag-${item.id}`}>Tag</label>
-          <select id={`item-tag-${item.id}`} className={inputClass} value={tag} onChange={(e) => setTag(e.target.value)}>
-            <option value="">None</option>
-            <option value="signature">Signature</option>
-            <option value="popular">Popular</option>
-            <option value="new">New</option>
+      <div className="mt-2 grid gap-2 sm:grid-cols-3">
+        <div className="sm:col-span-2">
+          <label className={labelClass} htmlFor={`item-section-${item.id}`}>Section</label>
+          <select
+            id={`item-section-${item.id}`}
+            className={inputClass}
+            value={sectionId}
+            onChange={(e) => setSectionId(e.target.value)}
+          >
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+              </option>
+            ))}
           </select>
         </div>
         <div>
           <label className={labelClass} htmlFor={`item-sort-${item.id}`}>Sort</label>
           <input id={`item-sort-${item.id}`} className={inputClass} value={sort} onChange={(e) => setSort(e.target.value)} inputMode="numeric" />
         </div>
+      </div>
+      <div className="mt-2">
+        <label className={labelClass} htmlFor={`item-tag-${item.id}`}>Tag</label>
+        <select id={`item-tag-${item.id}`} className={inputClass} value={tag} onChange={(e) => setTag(e.target.value)}>
+          <option value="">None</option>
+          <option value="signature">Signature</option>
+          <option value="popular">Popular</option>
+          <option value="new">New</option>
+        </select>
+      </div>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {item.image ? (
+          <img
+            src={item.image}
+            alt=""
+            className="h-12 w-12 rounded-md border-2 border-ink/15 object-cover"
+          />
+        ) : (
+          <span className="grid h-12 w-12 place-items-center rounded-md border-2 border-dashed border-ink/20 text-ink/30">
+            <UtensilsCrossed className="h-5 w-5" aria-hidden />
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="rounded-md border-2 border-ink/25 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/70 transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+        >
+          {item.image ? "Replace photo" : "Add photo"}
+        </button>
+        {item.image && (
+          <button
+            type="button"
+            onClick={removePhoto}
+            disabled={busy}
+            className="rounded-md border-2 border-ink/25 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/70 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
+          >
+            Remove photo
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={handleFile}
+          aria-hidden
+        />
       </div>
       {error && <p role="alert" className="mt-2 text-xs font-medium text-ember">{error}</p>}
       <div className="mt-3 flex gap-2">
@@ -299,8 +411,36 @@ function NewItemForm({
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [tag, setTag] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function reset() {
+    setName("");
+    setPrice("");
+    setDescription("");
+    setTag("");
+    setPhotoFile(null);
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoPreview(null);
+    setError(null);
+  }
+
+  function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    e.target.value = "";
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(file);
+    setPhotoPreview(file ? URL.createObjectURL(file) : null);
+  }
+
+  function clearPhoto() {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoFile(null);
+    setPhotoPreview(null);
+  }
 
   async function create() {
     const cents = dollarsToCents(price);
@@ -309,6 +449,8 @@ function NewItemForm({
     setBusy(true);
     setError(null);
     try {
+      let image: string | null = null;
+      if (photoFile) image = await uploadImageFile(photoFile);
       await adminFetch("/api/admin/items", {
         method: "POST",
         body: {
@@ -318,12 +460,10 @@ function NewItemForm({
           description: description.trim() || null,
           tag: tag || null,
           sort: 999,
+          image,
         },
       });
-      setName("");
-      setPrice("");
-      setDescription("");
-      setTag("");
+      reset();
       setOpen(false);
       onSaved();
     } catch (err) {
@@ -360,6 +500,41 @@ function NewItemForm({
         <option value="popular">Popular</option>
         <option value="new">New</option>
       </select>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        {photoPreview ? (
+          <img src={photoPreview} alt="" className="h-12 w-12 rounded-md border-2 border-ink/15 object-cover" />
+        ) : (
+          <span className="grid h-12 w-12 place-items-center rounded-md border-2 border-dashed border-ink/20 text-ink/30">
+            <UtensilsCrossed className="h-5 w-5" aria-hidden />
+          </span>
+        )}
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          disabled={busy}
+          className="rounded-md border-2 border-ink/25 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/70 transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+        >
+          {photoFile ? "Change photo" : "Add photo"}
+        </button>
+        {photoFile && (
+          <button
+            type="button"
+            onClick={clearPhoto}
+            disabled={busy}
+            className="rounded-md border-2 border-ink/25 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/70 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
+          >
+            Clear photo
+          </button>
+        )}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          className="hidden"
+          onChange={pickPhoto}
+          aria-hidden
+        />
+      </div>
       {error && <p role="alert" className="mt-2 text-xs font-medium text-ember">{error}</p>}
       <div className="mt-3 flex gap-2">
         <button
@@ -370,7 +545,10 @@ function NewItemForm({
           {busy ? "Adding…" : "Add item"}
         </button>
         <button
-          onClick={() => setOpen(false)}
+          onClick={() => {
+            reset();
+            setOpen(false);
+          }}
           disabled={busy}
           className="rounded-md border-2 border-ink/25 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
         >
@@ -387,10 +565,12 @@ function NewItemForm({
 
 function SectionCard({
   section,
+  sections,
   onChanged,
   onUnauthorized,
 }: {
   section: AdminMenuSection;
+  sections: AdminMenuSection[];
   onChanged: () => void;
   onUnauthorized: () => void;
 }) {
@@ -518,7 +698,13 @@ function SectionCard({
 
       <ul className="mt-4 space-y-2">
         {section.items.map((item) => (
-          <ItemRow key={item.id} item={item} onSaved={onChanged} onUnauthorized={onUnauthorized} />
+          <ItemRow
+            key={item.id}
+            item={item}
+            sections={sections}
+            onSaved={onChanged}
+            onUnauthorized={onUnauthorized}
+          />
         ))}
         {section.items.length === 0 && (
           <li className="py-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">
@@ -537,8 +723,10 @@ function SectionCard({
 
 export default function MenuTab({ onUnauthorized }: MenuTabProps) {
   const [sections, setSections] = useState<AdminMenuSection[]>([]);
+  const [activeId, setActiveId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [addingSection, setAddingSection] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newNote, setNewNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -547,6 +735,10 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
     try {
       const data = await adminFetch<{ sections: AdminMenuSection[] }>("/api/admin/menu");
       setSections(data.sections);
+      setActiveId((prev) => {
+        if (prev != null && data.sections.some((s) => s.id === prev)) return prev;
+        return data.sections[0]?.id ?? null;
+      });
       setError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
@@ -568,7 +760,7 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
     setBusy(true);
     setError(null);
     try {
-      await adminFetch("/api/admin/sections", {
+      const created = await adminFetch<AdminSection>("/api/admin/sections", {
         method: "POST",
         body: {
           label: newLabel.trim(),
@@ -578,7 +770,9 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
       });
       setNewLabel("");
       setNewNote("");
+      setAddingSection(false);
       await load();
+      if (created?.id) setActiveId(created.id);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return onUnauthorized();
       setError(err instanceof Error ? err.message : "Create failed.");
@@ -586,6 +780,8 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
       setBusy(false);
     }
   }
+
+  const active = sections.find((s) => s.id === activeId) ?? sections[0] ?? null;
 
   if (loading) {
     return (
@@ -596,45 +792,136 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5">
       {error && (
         <p role="alert" className="rounded-md border-2 border-ember/60 bg-ember/10 px-3 py-2.5 text-sm font-medium text-ember">
           {error}
         </p>
       )}
 
-      {sections.map((s) => (
-        <SectionCard key={s.id} section={s} onChanged={load} onUnauthorized={onUnauthorized} />
-      ))}
-
-      {/* new section */}
-      <div className="rounded-lg border-2 border-dashed border-ink/40 bg-paper/60 p-5">
-        <h3 className="font-display text-2xl uppercase tracking-[0.06em] text-ink/70">New section</h3>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <input
-            className={inputClass}
-            placeholder="Section label (e.g. Shakes)"
-            value={newLabel}
-            onChange={(e) => setNewLabel(e.target.value)}
-            aria-label="New section label"
-          />
-          <input
-            className={inputClass}
-            placeholder="Note (optional)"
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            aria-label="New section note"
-          />
+      {/* Section tabs — Add section pinned outside the scroller */}
+      <div className="flex items-stretch gap-2 rounded-lg border-2 border-ink/15 bg-paper p-2 shadow-ticket">
+        <div
+          className="flex min-w-0 flex-1 gap-1.5 overflow-x-auto [scrollbar-width:thin]"
+          role="tablist"
+          aria-label="Menu sections"
+        >
+          {sections.map((s) => {
+            const selected = active?.id === s.id && !addingSection;
+            return (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => {
+                  setAddingSection(false);
+                  setActiveId(s.id);
+                }}
+                className={`shrink-0 rounded-md px-3.5 py-2.5 text-left transition-colors ${
+                  selected
+                    ? "bg-ink text-cream"
+                    : "text-ink/65 hover:bg-cream hover:text-ink"
+                }`}
+              >
+                <span className="block font-mono text-[11px] font-semibold uppercase tracking-[0.12em]">
+                  {s.label}
+                </span>
+                <span
+                  className={`mt-0.5 block font-mono text-[10px] uppercase tracking-[0.1em] ${
+                    selected ? "text-cream/55" : "text-ink/35"
+                  }`}
+                >
+                  {s.items.length} {s.items.length === 1 ? "item" : "items"}
+                </span>
+              </button>
+            );
+          })}
         </div>
         <button
-          onClick={addSection}
-          disabled={busy || !newLabel.trim()}
-          className="mt-3 flex items-center gap-1.5 rounded-md bg-chili px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-cream transition-colors hover:bg-ember disabled:opacity-40"
+          type="button"
+          role="tab"
+          aria-selected={addingSection}
+          onClick={() => setAddingSection(true)}
+          className={`flex shrink-0 items-center gap-1.5 self-center rounded-md border-2 border-dashed px-3 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+            addingSection
+              ? "border-chili bg-chili/10 text-chili"
+              : "border-ink/25 text-ink/50 hover:border-ink hover:text-ink"
+          }`}
         >
           <Plus className="h-3.5 w-3.5" aria-hidden />
-          {busy ? "Adding…" : "Add section"}
+          <span className="hidden sm:inline">Section</span>
         </button>
       </div>
+
+      {addingSection ? (
+        <div className="rounded-lg border-2 border-dashed border-ink/40 bg-paper/60 p-5">
+          <h3 className="font-display text-2xl uppercase tracking-[0.06em] text-ink/70">
+            New section
+          </h3>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <input
+              className={inputClass}
+              placeholder="Section label (e.g. Shakes)"
+              value={newLabel}
+              onChange={(e) => setNewLabel(e.target.value)}
+              aria-label="New section label"
+              autoFocus
+            />
+            <input
+              className={inputClass}
+              placeholder="Note (optional)"
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              aria-label="New section note"
+            />
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={addSection}
+              disabled={busy || !newLabel.trim()}
+              className="flex items-center gap-1.5 rounded-md bg-chili px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-cream transition-colors hover:bg-ember disabled:opacity-40"
+            >
+              <Plus className="h-3.5 w-3.5" aria-hidden />
+              {busy ? "Adding…" : "Add section"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAddingSection(false);
+                setNewLabel("");
+                setNewNote("");
+              }}
+              disabled={busy}
+              className="rounded-md border-2 border-ink/25 px-4 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : active ? (
+        <SectionCard
+          key={active.id}
+          section={active}
+          sections={sections}
+          onChanged={load}
+          onUnauthorized={onUnauthorized}
+        />
+      ) : (
+        <div className="rounded-lg border-2 border-dashed border-ink/25 py-16 text-center">
+          <p className="font-mono text-[12px] uppercase tracking-[0.2em] text-ink/45">
+            No sections yet
+          </p>
+          <button
+            type="button"
+            onClick={() => setAddingSection(true)}
+            className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-chili px-4 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-cream"
+          >
+            <Plus className="h-3.5 w-3.5" aria-hidden />
+            Add section
+          </button>
+        </div>
+      )}
     </div>
   );
 }

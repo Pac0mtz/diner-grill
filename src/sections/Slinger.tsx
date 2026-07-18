@@ -71,7 +71,9 @@ export default function Slinger() {
               {LAYERS.map((l) => (
                 <li key={l.n} className="flex items-baseline gap-4">
                   <span className="font-mono text-sm text-chili">{l.n}</span>
-                  <span className="leader flex-1 font-display text-2xl uppercase tracking-[0.05em]">{l.label}</span>
+                  <span className="leader flex-1 font-display text-2xl uppercase tracking-[0.05em]">
+                    <span>{l.label}</span>
+                  </span>
                 </li>
               ))}
             </ol>

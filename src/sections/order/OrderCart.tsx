@@ -1,19 +1,31 @@
-import { Minus, Plus, ShoppingBag, Phone } from "lucide-react";
-import type { CartEntry } from "./OrderMenu";
+import { Link } from "react-router";
+import { Minus, Plus, ShoppingBag, Phone, Trash2 } from "lucide-react";
+import type { CartLine } from "../../lib/order-cart";
+import { formatModifierSummary } from "../../lib/order-cart";
 import { formatCents, TAX_RATE } from "../../lib/money";
 import { SITE } from "../../data/site";
 
-export type CustomerInfo = { name: string; phone: string; notes: string };
+export type CustomerInfo = {
+  name: string;
+  phone: string;
+  email: string;
+  notes: string;
+  marketing_opt_in: boolean;
+};
 
 type OrderCartProps = {
-  cart: Record<number, CartEntry>;
-  onSetQty: (itemId: number, qty: number) => void;
+  cart: CartLine[];
+  onSetQty: (key: string, qty: number) => void;
   customer: CustomerInfo;
   onCustomerChange: (next: CustomerInfo) => void;
   placing: boolean;
   error: string | null;
   payUnavailable: string | null;
   onPlaceOrder: () => void;
+  /** Compact mode for mobile sheet */
+  compact?: boolean;
+  signedIn?: boolean;
+  signedInEmail?: string;
 };
 
 const inputClass =
@@ -28,28 +40,40 @@ export default function OrderCart({
   error,
   payUnavailable,
   onPlaceOrder,
+  compact = false,
+  signedIn = false,
+  signedInEmail,
 }: OrderCartProps) {
-  const lines = Object.values(cart);
-  const subtotal = lines.reduce((sum, l) => sum + l.item.price_cents * l.qty, 0);
+  const lines = cart;
+  const subtotal = lines.reduce((sum, l) => sum + l.unit_price_cents * l.qty, 0);
   const tax = Math.round(subtotal * TAX_RATE);
   const total = subtotal + tax;
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email.trim());
   const canPlace =
-    lines.length > 0 && customer.name.trim().length > 0 && customer.phone.trim().length > 0 && !placing;
+    lines.length > 0 &&
+    customer.name.trim().length > 0 &&
+    customer.phone.trim().length > 0 &&
+    emailOk &&
+    !placing;
 
   return (
     <aside
-      className="h-fit rounded-lg border-2 border-ink bg-paper shadow-ticket lg:sticky lg:top-24"
+      className={`h-fit rounded-lg border-2 border-ink bg-paper shadow-ticket ${compact ? "" : "lg:sticky lg:top-[11.5rem]"}`}
       aria-label="Your order"
     >
-      {/* ticket header */}
-      <div className="border-b-2 border-dashed border-ink/30 px-6 py-4">
+      <div className="border-b-2 border-dashed border-ink/30 px-5 py-4 sm:px-6">
         <h2 className="flex items-center gap-2 font-display text-2xl uppercase tracking-[0.08em]">
           <ShoppingBag className="h-5 w-5 text-chili" aria-hidden />
           Your ticket
+          {lines.length > 0 && (
+            <span className="ml-auto rounded-full bg-chili px-2.5 py-0.5 font-mono text-[11px] text-cream">
+              {lines.reduce((n, l) => n + l.qty, 0)}
+            </span>
+          )}
         </h2>
       </div>
 
-      <div className="px-6 py-5">
+      <div className="px-5 py-5 sm:px-6">
         {lines.length === 0 ? (
           <p className="py-6 text-center font-mono text-[12px] uppercase leading-relaxed tracking-[0.16em] text-ink/45">
             Nothing on the ticket yet.
@@ -57,37 +81,81 @@ export default function OrderCart({
             Add something from the menu.
           </p>
         ) : (
-          <ul className="space-y-3">
-            {lines.map(({ item, qty }) => (
-              <li key={item.id} className="flex items-center gap-3">
-                <div className="flex items-center rounded-md border-2 border-ink/70 bg-cream">
-                  <button
-                    onClick={() => onSetQty(item.id, qty - 1)}
-                    className="grid h-7 w-7 place-items-center transition-colors hover:bg-mustard"
-                    aria-label={`Remove one ${item.name}`}
-                  >
-                    <Minus className="h-3.5 w-3.5" aria-hidden />
-                  </button>
-                  <span className="w-6 text-center font-mono text-sm font-medium">{qty}</span>
-                  <button
-                    onClick={() => onSetQty(item.id, qty + 1)}
-                    className="grid h-7 w-7 place-items-center transition-colors hover:bg-mustard"
-                    aria-label={`Add one more ${item.name}`}
-                  >
-                    <Plus className="h-3.5 w-3.5" aria-hidden />
-                  </button>
-                </div>
-                <span className="flex-1 text-sm font-medium leading-tight">{item.name}</span>
-                <span className="font-mono text-sm text-ink/70">
-                  {formatCents(item.price_cents * qty)}
-                </span>
-              </li>
-            ))}
+          <ul className="max-h-[40vh] space-y-3 overflow-y-auto pr-1 lg:max-h-none lg:overflow-visible">
+            {lines.map((line) => {
+              const summary = formatModifierSummary(line.item, line.modifiers);
+              return (
+                <li key={line.key} className="rounded-md border border-ink/10 bg-cream/50 p-2.5">
+                  <div className="flex items-start gap-2">
+                    <div className="flex items-center rounded-md border-2 border-ink/70 bg-cream">
+                      <button
+                        onClick={() => onSetQty(line.key, line.qty - 1)}
+                        className="grid h-7 w-7 place-items-center transition-colors hover:bg-mustard"
+                        aria-label={`Remove one ${line.item.name}`}
+                      >
+                        <Minus className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                      <span className="w-6 text-center font-mono text-sm font-medium">{line.qty}</span>
+                      <button
+                        onClick={() => onSetQty(line.key, line.qty + 1)}
+                        className="grid h-7 w-7 place-items-center transition-colors hover:bg-mustard"
+                        aria-label={`Add one more ${line.item.name}`}
+                      >
+                        <Plus className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-sm font-medium leading-tight">{line.item.name}</span>
+                        <span className="shrink-0 font-mono text-sm text-ink/70">
+                          {formatCents(line.unit_price_cents * line.qty)}
+                        </span>
+                      </div>
+                      {summary && (
+                        <p className="mt-0.5 text-[12px] leading-snug text-ink/55">{summary}</p>
+                      )}
+                      {line.line_note && (
+                        <p className="mt-0.5 text-[12px] italic text-ink/45">“{line.line_note}”</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onSetQty(line.key, 0)}
+                      className="mt-0.5 rounded p-1 text-ink/35 transition-colors hover:bg-ember/10 hover:text-ember"
+                      aria-label={`Remove ${line.item.name}`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
 
-        {/* customer details */}
         <div className="mt-6 space-y-3 border-t-2 border-dashed border-ink/30 pt-5">
+          <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-ink/50">
+            Pickup details
+          </p>
+          {signedIn ? (
+            <p className="rounded-md border border-ink/10 bg-cream/70 px-3 py-2 text-sm text-ink/65">
+              Signed in as <span className="font-semibold text-ink">{signedInEmail}</span>
+              {" · "}
+              <Link to="/account" className="font-semibold text-chili underline-offset-2 hover:underline">
+                Account
+              </Link>
+            </p>
+          ) : (
+            <p className="rounded-md border border-ink/10 bg-cream/70 px-3 py-2 text-sm text-ink/65">
+              <Link
+                to="/account/login?next=/order"
+                className="font-semibold text-chili underline-offset-2 hover:underline"
+              >
+                Sign in
+              </Link>{" "}
+              for faster checkout &amp; order history — or continue as guest.
+            </p>
+          )}
           <div>
             <label htmlFor="order-name" className="mb-1 block font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60">
               Name for the order *
@@ -117,21 +185,48 @@ export default function OrderCart({
             />
           </div>
           <div>
+            <label htmlFor="order-email" className="mb-1 block font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60">
+              Email * <span className="normal-case tracking-normal text-ink/40">(receipt &amp; updates)</span>
+            </label>
+            <input
+              id="order-email"
+              type="email"
+              autoComplete="email"
+              inputMode="email"
+              value={customer.email}
+              onChange={(e) => onCustomerChange({ ...customer, email: e.target.value })}
+              placeholder="you@email.com"
+              className={inputClass}
+            />
+          </div>
+          <div>
             <label htmlFor="order-notes" className="mb-1 block font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60">
-              Notes for the kitchen
+              Order notes (optional)
             </label>
             <textarea
               id="order-notes"
               rows={2}
               value={customer.notes}
               onChange={(e) => onCustomerChange({ ...customer, notes: e.target.value })}
-              placeholder="Eggs over easy, no onions…"
+              placeholder="Allergies, timing, etc."
               className={`${inputClass} resize-none`}
             />
           </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border-2 border-ink/15 px-3 py-3">
+            <input
+              type="checkbox"
+              checked={customer.marketing_opt_in}
+              onChange={(e) =>
+                onCustomerChange({ ...customer, marketing_opt_in: e.target.checked })
+              }
+              className="mt-0.5 h-4 w-4 accent-chili"
+            />
+            <span className="text-sm leading-snug text-ink/70">
+              Email me offers and specials from Diner Grill
+            </span>
+          </label>
         </div>
 
-        {/* totals */}
         <dl className="mt-6 space-y-1.5 border-t-2 border-dashed border-ink/30 pt-5 font-mono text-sm">
           <div className="flex justify-between text-ink/70">
             <dt>Subtotal</dt>
@@ -170,12 +265,18 @@ export default function OrderCart({
           disabled={!canPlace}
           className="mt-5 w-full rounded-md bg-chili px-6 py-3.5 font-mono text-sm font-semibold uppercase tracking-[0.16em] text-cream shadow-ticket transition-all hover:-translate-y-0.5 hover:bg-ember disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
         >
-          {placing ? "Placing order…" : lines.length ? `Place order — ${formatCents(total)}` : "Place order"}
+          {placing ? "Placing order…" : lines.length ? `Checkout — ${formatCents(total)}` : "Checkout"}
         </button>
         <p className="mt-3 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-ink/40">
-          Pickup at the counter · Open 24 hours
+          Pay ahead · Pickup at the counter · Open 24 hours
         </p>
       </div>
     </aside>
   );
+}
+
+export function cartTotals(cart: CartLine[]) {
+  const subtotal = cart.reduce((sum, l) => sum + l.unit_price_cents * l.qty, 0);
+  const tax = Math.round(subtotal * TAX_RATE);
+  return { subtotal, tax, total: subtotal + tax, count: cart.reduce((n, l) => n + l.qty, 0) };
 }

@@ -13,7 +13,7 @@ export default function Hero() {
         SLINGER
       </div>
 
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 items-center gap-12 px-5 pt-28 md:px-8 lg:grid-cols-[1.15fr_0.85fr]">
+      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 items-center gap-12 px-5 pt-28 md:px-8 lg:grid-cols-[1fr_1fr] lg:gap-10">
         <div className="flex flex-col justify-center">
           <p className="mb-5 flex items-center gap-3 font-mono text-[12px] uppercase tracking-[0.3em] text-mustard">
             <span className="h-px w-10 bg-mustard/60" aria-hidden />
@@ -45,13 +45,6 @@ export default function Hero() {
               <ShoppingBag className="h-4 w-4" aria-hidden />
               Order online
             </Link>
-            <Link
-              to="/visit"
-              className="flex items-center gap-2 rounded-md border border-cream/25 px-7 py-3.5 font-mono text-sm uppercase tracking-[0.14em] text-cream transition-colors hover:border-mustard hover:text-mustard"
-            >
-              <MapPin className="h-4 w-4" aria-hidden />
-              Find the counter
-            </Link>
           </div>
 
           <div className="mt-14 flex flex-wrap gap-x-10 gap-y-4 pb-10">
@@ -73,15 +66,15 @@ export default function Hero() {
         </div>
 
         {/* hero photo card */}
-        <div className="relative mx-auto mb-10 w-full max-w-md self-center lg:mb-0 lg:justify-self-end">
-          <div className="rotate-2 rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket transition-transform duration-500 hover:rotate-0">
+        <div className="relative mx-auto mb-10 w-full max-w-lg self-center sm:max-w-xl lg:mb-0 lg:max-w-none lg:justify-self-end">
+          <div className="rotate-2 rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket transition-transform duration-500 hover:rotate-0 md:p-4">
             <img
               src="/photos/hero-diner.jpg"
               alt="The Diner Grill restaurant on Irving Park Road — open 24 hours"
               className="aspect-[4/3] w-full rounded-sm object-cover"
               loading="eager"
             />
-            <p className="pt-3 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-ink/60">
+            <p className="pt-3 text-center font-mono text-[11px] uppercase tracking-[0.22em] text-ink/60 md:text-[12px]">
               Irving Park Rd · open 24 hours
             </p>
           </div>
@@ -89,9 +82,9 @@ export default function Hero() {
             src="/photos/logo-badge.jpg"
             alt=""
             aria-hidden
-            className="spin-slow absolute -top-7 left-6 w-20 rounded-full border-4 border-ink shadow-ticket md:w-24"
+            className="spin-slow absolute -top-8 left-6 w-24 rounded-full border-4 border-ink shadow-ticket md:-top-10 md:w-28"
           />
-          <span className="swing absolute -bottom-4 right-6 rounded-sm bg-mustard px-4 py-2 font-display text-xl uppercase tracking-[0.1em] text-ink shadow-ticket">
+          <span className="swing absolute -bottom-4 right-6 rounded-sm bg-mustard px-4 py-2 font-display text-xl uppercase tracking-[0.1em] text-ink shadow-ticket md:text-2xl">
             Est. 1937
           </span>
         </div>

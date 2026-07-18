@@ -42,7 +42,9 @@ node server/create-admin.js <username> <password>
 
 - `ADMIN_TOKEN` — optional static token for the print agent / automation (admin dashboard uses username/password)
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `VITE_STRIPE_PK` — without these, ordering shows a "call to order" fallback
-- `PRINTER_IP`, `PRINTER_DEVICE_ID` — Epson receipt printer (restaurant LAN)
+- `PRINT_METHOD` — `email` (Epson mail-to-print, default), `agent` (LAN ePOS), or `both`
+- `PRINTER_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` — mail-to-print (also configurable in Admin → Settings)
+- `PRINTER_IP`, `PRINTER_DEVICE_ID` — Epson LAN ePOS (print agent only)
 
 ## Project structure
 

@@ -45,7 +45,7 @@ async function tick() {
   if (!order) return; // nothing queued — stay quiet
 
   log(`printing ${order.order_number} (order #${order.id}, total $${(order.total_cents / 100).toFixed(2)})`);
-  const xml = buildReceiptXml(order);
+  const xml = await buildReceiptXml(order);
   const result = await printToPrinter(PRINTER_IP, PRINTER_DEVICE_ID, xml);
   log(
     result.ok

@@ -73,13 +73,17 @@
     background-size: 18px 18px;
   }
 
-  /* Dotted price leader rows on the menu */
+  /* Dotted price leader rows on the menu.
+     Expect a single child (name + optional tag), then ::after fills to the price. */
   .leader {
-    @apply flex items-baseline gap-2;
+    @apply flex min-w-0 items-baseline gap-2;
+  }
+  .leader > :first-child {
+    @apply min-w-0 shrink;
   }
   .leader::after {
     content: "";
-    @apply flex-1 border-b-2 border-dotted border-ink/30 translate-y-[-4px];
+    @apply min-w-4 flex-1 translate-y-[-0.35em] border-b-2 border-dotted border-ink/30;
   }
 
   /* ---- Vintage diner motion ---- */
@@ -152,7 +156,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .neon-flicker, .chase-lights, .swing, .stamp-in, .spin-slow {
+  .neon-flicker, .chase-lights, .swing, .stamp-in, .spin-slow, .animate-marquee {
     animation: none !important;
   }
   .reveal {

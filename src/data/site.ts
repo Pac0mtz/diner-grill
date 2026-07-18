@@ -6,4 +6,7 @@ export const SITE = {
   orderUrl: "/order",
   directionsUrl:
     "https://www.google.com/maps/dir/?api=1&destination=1635+W+Irving+Park+Rd+Chicago+IL+60613",
+  reviewsUrl: "/reviews",
+  googleMapsUrl:
+    "https://www.google.com/maps/search/?api=1&query=Diner+Grill+1635+W+Irving+Park+Rd+Chicago+IL",
 } as const;

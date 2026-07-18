@@ -2,6 +2,8 @@ import { useState, type FormEvent } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { Lock, ArrowLeft } from "lucide-react";
+import type { CartLine } from "../../lib/order-cart";
+import { formatModifierSummary } from "../../lib/order-cart";
 import { formatCents } from "../../lib/money";
 
 type PaymentStepProps = {
@@ -9,6 +11,8 @@ type PaymentStepProps = {
   clientSecret: string;
   orderNumber: string;
   totalCents: number;
+  lines: CartLine[];
+  customerName: string;
   onPaid: () => void;
   onBack: () => void;
 };
@@ -88,19 +92,21 @@ export default function PaymentStep({
   clientSecret,
   orderNumber,
   totalCents,
+  lines,
+  customerName,
   onPaid,
   onBack,
 }: PaymentStepProps) {
   return (
-    <div className="mx-auto max-w-lg">
+    <div className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-[1fr_340px]">
       <div className="rounded-lg border-2 border-ink bg-paper p-6 shadow-ticket md:p-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-chili">Order {orderNumber}</p>
         <h2 className="mt-2 font-display text-4xl uppercase tracking-[0.06em]">
           Pay for your ticket
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-ink/60">
-          Your order is on hold. Once payment clears, it prints in the kitchen and
-          the counter crew gets to work.
+          Held for {customerName.split(" ")[0] || "you"}. Once payment clears, it prints in the
+          kitchen.
         </p>
         <Elements
           stripe={stripePromise}
@@ -122,9 +128,35 @@ export default function PaymentStep({
           <PaymentForm totalCents={totalCents} onPaid={onPaid} onBack={onBack} />
         </Elements>
       </div>
-      <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink/40">
-        Payments handled securely by Stripe
-      </p>
+
+      <aside className="h-fit rounded-lg border-2 border-ink/15 bg-paper p-5 shadow-ticket lg:sticky lg:top-24">
+        <h3 className="font-display text-2xl uppercase tracking-[0.06em]">Summary</h3>
+        <ul className="mt-4 space-y-3 border-b-2 border-dashed border-ink/25 pb-4">
+          {lines.map((line) => {
+            const summary = formatModifierSummary(line.item, line.modifiers);
+            return (
+              <li key={line.key} className="text-sm">
+                <div className="flex justify-between gap-2 font-medium">
+                  <span>
+                    {line.qty}× {line.item.name}
+                  </span>
+                  <span className="shrink-0 font-mono text-ink/70">
+                    {formatCents(line.unit_price_cents * line.qty)}
+                  </span>
+                </div>
+                {summary && <p className="mt-0.5 text-[12px] text-ink/50">{summary}</p>}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-4 flex justify-between font-mono text-base font-semibold">
+          <span>Total</span>
+          <span>{formatCents(totalCents)}</span>
+        </p>
+        <p className="mt-4 font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-ink/40">
+          Payments handled securely by Stripe
+        </p>
+      </aside>
     </div>
   );
 }
