@@ -62,7 +62,10 @@ export function buildReceiptHtml(order: AdminOrder): string {
 <title>Receipt ${esc(order.order_number)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  @page { margin: 4mm; size: 80mm auto; }
+  /* Standard paper size — regular printers choke on custom 80mm-tall pages
+     and can spit out an extremely long page. The receipt is simply a narrow
+     72mm column at the top of a normal sheet. */
+  @page { margin: 10mm; }
   html, body { background: #fff; }
   body {
     width: 72mm;
