@@ -138,7 +138,13 @@ export function buildReceiptHtml(order: AdminOrder): string {
   </div>
   <div class="rule-heavy"></div>
   <div class="footer">
-    ${order.stripe_payment_intent ? `<div class="paid-badge">Paid Online</div>` : ""}
+    ${
+      order.payment_method === "cash"
+        ? `<div class="paid-badge">Cash &mdash; Pay at Pickup</div>`
+        : order.stripe_payment_intent
+          ? `<div class="paid-badge">Paid Online</div>`
+          : ""
+    }
     <div class="thanks" style="margin-top:8px">Thank You!</div>
     <div>Show this number at the counter.</div>
   </div>

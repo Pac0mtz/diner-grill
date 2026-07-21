@@ -12,7 +12,7 @@ import { useRouteSeo } from "../hooks/usePageMeta";
 import { SITE } from "../data/site";
 import { getCustomerToken, useCustomerAuth } from "../lib/customer-auth";
 import OrderMenu from "../sections/order/OrderMenu";
-import OrderCart, { cartTotals, type CustomerInfo } from "../sections/order/OrderCart";
+import OrderCart, { cartTotals, type CustomerInfo, type PayMethod } from "../sections/order/OrderCart";
 import PaymentStep from "../sections/order/PaymentStep";
 import OrderSuccess from "../sections/order/OrderSuccess";
 
@@ -20,7 +20,7 @@ type Step = "shop" | "pay" | "done";
 
 type PlacedOrder = {
   order_number: string;
-  client_secret: string;
+  client_secret?: string;
   total_cents: number;
 };
 
@@ -55,9 +55,15 @@ export default function OrderPage() {
   const [placed, setPlaced] = useState<PlacedOrder | null>(null);
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [stripePk, setStripePk] = useState(ENV_STRIPE_PK);
+  const [payMethod, setPayMethod] = useState<PayMethod>("card");
 
   const stripePromise = useMemo(() => (stripePk ? loadStripe(stripePk) : null), [stripePk]);
   const totals = cartTotals(cart);
+
+  // If card payment isn't configured, default to cash at pickup.
+  useEffect(() => {
+    if (!stripePk) setPayMethod("cash");
+  }, [stripePk]);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,7 +179,7 @@ export default function OrderPage() {
       setError("Add at least one item to your ticket.");
       return;
     }
-    if (!stripePromise) {
+    if (payMethod === "card" && !stripePromise) {
       setPayUnavailable(PAY_FALLBACK);
       setMobileCartOpen(true);
       return;
@@ -188,6 +194,7 @@ export default function OrderPage() {
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          payment_method: payMethod,
           customer_name: customer.name.trim(),
           phone: customer.phone.trim(),
           customer_email: customer.email.trim().toLowerCase(),
@@ -207,7 +214,12 @@ export default function OrderPage() {
         setMobileCartOpen(true);
         return;
       }
-      if (!res.ok || !data.client_secret || !data.order_number || data.total_cents === undefined) {
+      if (
+        !res.ok ||
+        !data.order_number ||
+        data.total_cents === undefined ||
+        (payMethod === "card" && !data.client_secret)
+      ) {
         setError(data.error || "Could not place your order — please try again.");
         setMobileCartOpen(true);
         return;
@@ -218,7 +230,8 @@ export default function OrderPage() {
         total_cents: data.total_cents,
       });
       setMobileCartOpen(false);
-      setStep("pay");
+      // Cash orders skip the payment step entirely — go straight to done.
+      setStep(payMethod === "cash" ? "done" : "pay");
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setError("Network error — check your connection and try again.");
@@ -322,8 +335,9 @@ export default function OrderPage() {
             customerEmail={customer.email.trim() || undefined}
             lines={cart}
             onNewOrder={resetOrder}
+            payMethod={payMethod}
           />
-        ) : step === "pay" && placed && stripePromise ? (
+        ) : step === "pay" && placed && placed.client_secret && stripePromise ? (
           <PaymentStep
             stripePromise={stripePromise}
             clientSecret={placed.client_secret}
@@ -373,6 +387,9 @@ export default function OrderPage() {
                     error={error}
                     payUnavailable={payUnavailable}
                     onPlaceOrder={placeOrder}
+                    payMethod={payMethod}
+                    onPayMethodChange={setPayMethod}
+                    cardAvailable={Boolean(stripePromise)}
                     signedIn={Boolean(account)}
                     signedInEmail={account?.email}
                   />
@@ -434,6 +451,9 @@ export default function OrderPage() {
                     error={error}
                     payUnavailable={payUnavailable}
                     onPlaceOrder={placeOrder}
+                    payMethod={payMethod}
+                    onPayMethodChange={setPayMethod}
+                    cardAvailable={Boolean(stripePromise)}
                     signedIn={Boolean(account)}
                     signedInEmail={account?.email}
                   />

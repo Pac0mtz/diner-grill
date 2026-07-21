@@ -13,6 +13,8 @@ export type CustomerInfo = {
   marketing_opt_in: boolean;
 };
 
+export type PayMethod = "card" | "cash";
+
 type OrderCartProps = {
   cart: CartLine[];
   onSetQty: (key: string, qty: number) => void;
@@ -22,6 +24,10 @@ type OrderCartProps = {
   error: string | null;
   payUnavailable: string | null;
   onPlaceOrder: () => void;
+  payMethod: PayMethod;
+  onPayMethodChange: (m: PayMethod) => void;
+  /** Whether online card payment is currently available (Stripe configured). */
+  cardAvailable: boolean;
   /** Compact mode for mobile sheet */
   compact?: boolean;
   signedIn?: boolean;
@@ -40,6 +46,9 @@ export default function OrderCart({
   error,
   payUnavailable,
   onPlaceOrder,
+  payMethod,
+  onPayMethodChange,
+  cardAvailable,
   compact = false,
   signedIn = false,
   signedInEmail,
@@ -227,7 +236,52 @@ export default function OrderCart({
           </label>
         </div>
 
-        <dl className="mt-6 space-y-1.5 border-t-2 border-dashed border-ink/30 pt-5 font-mono text-sm">
+        <div className="mt-6 border-t-2 border-dashed border-ink/30 pt-5">
+          <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink/50">
+            Payment
+          </p>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Payment method">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={payMethod === "card"}
+              disabled={!cardAvailable}
+              onClick={() => onPayMethodChange("card")}
+              className={`rounded-md border-2 px-3 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                payMethod === "card"
+                  ? "border-ink bg-ink text-cream"
+                  : "border-ink/25 text-ink/60 hover:border-ink hover:text-ink"
+              } disabled:cursor-not-allowed disabled:opacity-40`}
+            >
+              💳 Card online
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={payMethod === "cash"}
+              onClick={() => onPayMethodChange("cash")}
+              className={`rounded-md border-2 px-3 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
+                payMethod === "cash"
+                  ? "border-ink bg-ink text-cream"
+                  : "border-ink/25 text-ink/60 hover:border-ink hover:text-ink"
+              }`}
+            >
+              💵 Cash at pickup
+            </button>
+          </div>
+          {!cardAvailable && (
+            <p className="mt-2 text-[12px] leading-snug text-ink/50">
+              Card payment online is temporarily unavailable — pay cash when you pick up.
+            </p>
+          )}
+          {payMethod === "cash" && (
+            <p className="mt-2 text-[12px] leading-snug text-ink/50">
+              Bring cash to the counter — your order goes straight to the kitchen.
+            </p>
+          )}
+        </div>
+
+        <dl className="mt-5 space-y-1.5 border-t-2 border-dashed border-ink/30 pt-5 font-mono text-sm">
           <div className="flex justify-between text-ink/70">
             <dt>Subtotal</dt>
             <dd>{formatCents(subtotal)}</dd>
@@ -265,10 +319,14 @@ export default function OrderCart({
           disabled={!canPlace}
           className="mt-5 w-full rounded-md bg-chili px-6 py-3.5 font-mono text-sm font-semibold uppercase tracking-[0.16em] text-cream shadow-ticket transition-all hover:-translate-y-0.5 hover:bg-ember disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0"
         >
-          {placing ? "Placing order…" : lines.length ? `Checkout — ${formatCents(total)}` : "Checkout"}
+          {placing
+            ? "Placing order…"
+            : lines.length
+              ? `${payMethod === "cash" ? "Place order" : "Checkout"} — ${formatCents(total)}`
+              : "Checkout"}
         </button>
         <p className="mt-3 text-center font-mono text-[10px] uppercase leading-relaxed tracking-[0.14em] text-ink/40">
-          Pay ahead · Pickup at the counter · Open 24 hours
+          {payMethod === "cash" ? "Pay cash at pickup" : "Pay ahead"} · Pickup at the counter · Open 24 hours
         </p>
       </div>
     </aside>

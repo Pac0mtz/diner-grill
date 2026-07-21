@@ -545,12 +545,13 @@ app.get("/api/stripe/config", h(async (req, res) => {
 
 // POST /api/orders — validate, price (incl. modifiers), create order + Stripe PaymentIntent.
 app.post("/api/orders", optionalCustomerAuth, h(async (req, res) => {
+  const paymentMethod = req.body && req.body.payment_method === "cash" ? "cash" : "card";
   const stripe = await getStripe();
-  if (!stripe) {
+  if (paymentMethod === "card" && !stripe) {
     return bad(
       res,
       503,
-      "Online payment is not configured (Stripe secret key missing). Please call (773) 248-2030 to order."
+      "Online card payment is not configured. Choose cash at pickup, or call (773) 248-2030 to order."
     );
   }
 
@@ -627,8 +628,8 @@ app.post("/api/orders", optionalCustomerAuth, h(async (req, res) => {
   try {
     await client.query("BEGIN");
     const ins = await client.query(
-      `INSERT INTO orders (order_number, customer_name, phone, customer_email, notes, items_json, subtotal_cents, tax_cents, total_cents, status, print_status, customer_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending_payment', 'queued', $10) RETURNING id`,
+      `INSERT INTO orders (order_number, customer_name, phone, customer_email, notes, items_json, subtotal_cents, tax_cents, total_cents, status, print_status, customer_id, payment_method)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, ${paymentMethod === "cash" ? "'paid'" : "'pending_payment'"}, 'queued', $10, $11) RETURNING id`,
       [
         `PENDING-${crypto.randomUUID()}`,
         String(customer_name).trim(),
@@ -640,6 +641,7 @@ app.post("/api/orders", optionalCustomerAuth, h(async (req, res) => {
         tax,
         total,
         customerId,
+        paymentMethod,
       ]
     );
     const id = ins.rows[0].id;
@@ -653,6 +655,27 @@ app.post("/api/orders", optionalCustomerAuth, h(async (req, res) => {
     return bad(res, 500, "Could not create order.");
   } finally {
     client.release();
+  }
+
+  // Cash at pickup — no Stripe involved. The order is immediately live for the
+  // kitchen (status 'paid' drives the admin "New" flow + print queue); staff
+  // collect cash at the counter. Run the same post-payment dispatch as the
+  // Stripe webhook so kitchen tickets / staff notifications / customer
+  // receipts fire regardless of print mode.
+  if (paymentMethod === "cash") {
+    try {
+      const { rows } = await query("SELECT * FROM orders WHERE id = $1", [order.id]);
+      if (rows[0]) {
+        await dispatchPrint(parseOrder(rows[0]), { notifyStaff: true, customerReceipt: true });
+      }
+    } catch (err) {
+      console.error("[orders] cash dispatchPrint failed:", err.message);
+    }
+    return res.json({
+      order_number: order.orderNumber,
+      total_cents: total,
+      payment_method: "cash",
+    });
   }
 
   try {

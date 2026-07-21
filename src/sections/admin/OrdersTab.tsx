@@ -318,6 +318,11 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                   <span>Total</span>
                   <span>{formatCents(o.total_cents)}</span>
                 </p>
+                {o.payment_method === "cash" && (
+                  <p className="mt-1.5 inline-block rounded-sm border-2 border-ink bg-mustard px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.14em] text-ink">
+                    💵 Cash — collect at pickup
+                  </p>
+                )}
                 <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/40">
                   Print: {o.print_status}
                   {o.stripe_dashboard_url && (

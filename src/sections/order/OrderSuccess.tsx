@@ -11,6 +11,7 @@ type OrderSuccessProps = {
   customerEmail?: string;
   lines: CartLine[];
   onNewOrder: () => void;
+  payMethod?: "card" | "cash";
 };
 
 export default function OrderSuccess({
@@ -20,7 +21,9 @@ export default function OrderSuccess({
   customerEmail,
   lines,
   onNewOrder,
+  payMethod = "card",
 }: OrderSuccessProps) {
+  const cash = payMethod === "cash";
   const first = customerName.split(" ")[0] || "friend";
 
   return (
@@ -28,7 +31,7 @@ export default function OrderSuccess({
       <div className="rounded-lg border-2 border-ink bg-paper px-6 py-10 text-center shadow-ticket md:px-10">
         <CheckCircle2 className="mx-auto h-12 w-12 text-chili" aria-hidden />
         <p className="mt-4 font-mono text-[12px] uppercase tracking-[0.24em] text-ink/60">
-          Paid · ticket sent to the kitchen
+          {cash ? "Order placed · pay cash at pickup" : "Paid · ticket sent to the kitchen"}
         </p>
         <p className="mt-6 font-mono text-[11px] uppercase tracking-[0.2em] text-ink/50">
           Your order number
@@ -40,7 +43,7 @@ export default function OrderSuccess({
           Show this at the counter, {first}.
         </p>
         <p className="mt-2 text-sm leading-relaxed text-ink/60">
-          {formatCents(totalCents)} paid · We’ll email updates
+          {formatCents(totalCents)} {cash ? "due in cash at the counter" : "paid"} · We’ll email updates
           {customerEmail ? (
             <>
               {" "}

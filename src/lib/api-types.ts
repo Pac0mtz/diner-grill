@@ -77,6 +77,7 @@ export type AdminOrder = {
   total_cents: number;
   status: OrderStatus;
   stripe_payment_intent: string | null;
+  payment_method?: "card" | "cash";
   stripe_dashboard_url?: string | null;
   print_status: "queued" | "printed" | "failed";
   created_at: string;
