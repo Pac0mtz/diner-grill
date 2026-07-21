@@ -86,9 +86,9 @@ export default function GalleryPage() {
             {photos.length} photos
           </p>
 
-          <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3">
             {photos.map((p, i) => (
-              <li key={`${p.src}-${i}`}>
+              <li key={`${p.src}-${i}`} className="min-w-0">
                 <GalleryThumb photo={p} onOpen={() => setActive(i)} />
               </li>
             ))}
