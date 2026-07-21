@@ -153,6 +153,70 @@ function isIosWebKit(): boolean {
 }
 
 /**
+ * Full-screen receipt preview with explicit Print / Close buttons.
+ * Works in environments where popups and auto-print are blocked
+ * (iOS Safari, in-app webviews).
+ */
+function showReceiptOverlay(order: AdminOrder): void {
+  if (document.getElementById("dg-receipt-overlay")) return;
+
+  const overlay = document.createElement("div");
+  overlay.id = "dg-receipt-overlay";
+  overlay.style.cssText =
+    "position:fixed;inset:0;z-index:99999;background:rgba(20,16,12,0.92);display:flex;flex-direction:column;";
+
+  const bar = document.createElement("div");
+  bar.style.cssText =
+    "flex:0 0 auto;display:flex;gap:10px;justify-content:center;padding:12px;padding-top:calc(12px + env(safe-area-inset-top));";
+
+  const mkBtn = (label: string, primary: boolean) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = label;
+    b.style.cssText = `flex:1;max-width:220px;padding:14px 18px;border-radius:8px;font-family:monospace;font-size:13px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;border:2px solid ${
+      primary ? "#d33f2e;background:#d33f2e;color:#fdf6e9" : "#fdf6e9;background:transparent;color:#fdf6e9"
+    }`;
+    return b;
+  };
+
+  const printBtn = mkBtn("🖨 Print", true);
+  const closeBtn = mkBtn("Close", false);
+  bar.append(printBtn, closeBtn);
+
+  const frameWrap = document.createElement("div");
+  frameWrap.style.cssText =
+    "flex:1 1 auto;overflow:auto;display:flex;justify-content:center;padding:0 10px calc(16px + env(safe-area-inset-bottom));";
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText =
+    "width:100%;max-width:420px;height:100%;border:0;border-radius:10px;background:#fff;";
+  frameWrap.appendChild(iframe);
+
+  overlay.append(bar, frameWrap);
+  document.body.appendChild(overlay);
+
+  const doc = iframe.contentDocument;
+  if (doc) {
+    doc.open();
+    doc.write(buildReceiptHtml(order));
+    doc.close();
+  }
+
+  const close = () => overlay.remove();
+  closeBtn.addEventListener("click", close);
+  printBtn.addEventListener("click", () => {
+    const win = iframe.contentWindow;
+    if (!win) return;
+    win.focus();
+    try {
+      win.print();
+    } catch {
+      // Last resort — print the whole page (receipt iframe visible).
+      window.print();
+    }
+  });
+}
+
+/**
  * Print an order receipt on the local device.
  * Desktop: hidden iframe + print(). iOS/WebKit: dedicated window (hidden
  * iframes are unreliable for printing in Safari/WKWebView).
@@ -167,16 +231,10 @@ export function printReceiptLocally(order: AdminOrder): void {
   setTimeout(release, 5000);
 
   if (isIosWebKit()) {
-    const win = window.open("", "_blank");
-    if (!win) return release();
-    win.document.open();
-    win.document.write(
-      buildReceiptHtml(order).replace(
-        "</body>",
-        `<script>window.addEventListener("load",function(){setTimeout(function(){window.print();},300);});<\/script></body>`
-      )
-    );
-    win.document.close();
+    // iOS / in-app webviews often block popups and hidden-iframe printing,
+    // so show a full-screen preview with an explicit Print button instead.
+    release();
+    showReceiptOverlay(order);
     return;
   }
 
