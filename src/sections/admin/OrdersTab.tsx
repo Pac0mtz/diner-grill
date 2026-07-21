@@ -118,6 +118,18 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
     return () => clearInterval(timer);
   }, [load]);
 
+  // Keep replaying the alarm every few seconds while any new (paid) order
+  // is waiting to be accepted. Stops as soon as all are accepted/cancelled
+  // or sound is muted.
+  const hasUnaccepted = orders.some((o) => o.status === "paid");
+  useEffect(() => {
+    if (!hasUnaccepted || !soundOn) return;
+    const timer = setInterval(() => {
+      if (soundOnRef.current) void playOrderAlert();
+    }, 5_000);
+    return () => clearInterval(timer);
+  }, [hasUnaccepted, soundOn]);
+
   async function updateStatus(id: number, status: OrderStatus) {
     setBusyId(id);
     try {
