@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Printer, RefreshCw, Volume2, VolumeX, ExternalLink, Mail } from "lucide-react";
+import { printReceiptLocally } from "./receipt-print";
 import type { AdminOrder, OrderStatus } from "../../lib/api-types";
 import { formatCents } from "../../lib/money";
 import { playOrderAlert } from "../../lib/order-alert";
@@ -372,6 +373,17 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                     >
                       <Printer className="h-3.5 w-3.5" aria-hidden />
                       Reprint
+                    </button>
+                  )}
+                  {o.status !== "pending_payment" && (
+                    <button
+                      type="button"
+                      onClick={() => printReceiptLocally(o)}
+                      className="flex items-center gap-1.5 rounded-md border-2 border-ink/30 px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/60 transition-colors hover:border-ink hover:text-ink"
+                      title="Print receipt on this device's printer"
+                    >
+                      <Printer className="h-3.5 w-3.5" aria-hidden />
+                      Print local
                     </button>
                   )}
                   {o.customer_email && o.status !== "pending_payment" && (
