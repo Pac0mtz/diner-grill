@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MENU } from "../data/menu";
-import { SECTION_ICONS } from "../lib/menu-section-icons";
+import { SECTION_FEATURED, SECTION_ICONS } from "../lib/menu-section-icons";
 
 const TAG_STYLES: Record<string, string> = {
   signature: "bg-chili text-cream",
@@ -29,35 +29,60 @@ export default function MenuSection() {
           </p>
         </div>
 
-        {/* category tabs — horizontally scrollable on small screens */}
+        {/* Featured category cards — full-bleed image on top, scroll on mobile */}
         <div
-          className="-mx-5 mt-12 flex min-w-0 gap-2 overflow-x-auto overscroll-x-contain px-5 pb-2 [scrollbar-width:thin] md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0"
+          className="-mx-5 mt-12 flex min-w-0 snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain px-5 pb-2 touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
           role="tablist"
           aria-label="Menu categories"
         >
           {MENU.map((c) => {
             const Icon = SECTION_ICONS[c.id];
             const selected = active === c.id;
+            const featured = SECTION_FEATURED[c.id] || c.items.find((i) => i.image)?.image;
             return (
               <button
                 key={c.id}
                 role="tab"
                 aria-selected={selected}
                 onClick={() => setActive(c.id)}
-                className={`inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full border-2 px-4 py-2.5 font-mono text-[12px] uppercase tracking-[0.14em] transition-all sm:px-5 ${
+                className={`group relative w-[9.25rem] shrink-0 snap-start overflow-hidden rounded-lg border-2 text-left transition-all sm:w-[10.5rem] md:w-[11.25rem] ${
                   selected
-                    ? "border-ink bg-ink text-cream shadow-ticket"
-                    : "border-ink/25 bg-transparent text-ink/70 hover:border-ink hover:text-ink"
+                    ? "border-ink bg-ink shadow-ticket ring-2 ring-mustard/80"
+                    : "border-ink/15 bg-paper hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-ticket"
                 }`}
               >
-                {Icon && (
-                  <Icon
-                    className={`h-4 w-4 shrink-0 ${selected ? "text-mustard" : "text-chili/80"}`}
+                <span className="relative block h-[5.75rem] w-full overflow-hidden bg-ink/10 sm:h-[6.75rem] md:h-[7.5rem]">
+                  {featured ? (
+                    <img
+                      src={featured}
+                      alt=""
+                      loading="lazy"
+                      className={`absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 ${
+                        selected ? "scale-[1.12]" : "scale-[1.08] group-hover:scale-[1.14]"
+                      }`}
+                    />
+                  ) : (
+                    <span className="absolute inset-0 grid place-items-center bg-cream">
+                      {Icon && <Icon className="h-9 w-9 text-chili/70" aria-hidden />}
+                    </span>
+                  )}
+                  <span
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/25 to-transparent"
                     aria-hidden
-                    strokeWidth={2.25}
                   />
-                )}
-                {c.label}
+                  {Icon && (
+                    <span className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-cream/95 text-chili shadow-sm">
+                      <Icon className="h-3.5 w-3.5" aria-hidden strokeWidth={2.25} />
+                    </span>
+                  )}
+                </span>
+                <span
+                  className={`block min-h-[2.75rem] px-2.5 py-2 font-mono text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] sm:min-h-[3rem] sm:text-[11px] ${
+                    selected ? "text-cream" : "text-ink/85"
+                  }`}
+                >
+                  {c.label}
+                </span>
               </button>
             );
           })}
@@ -88,6 +113,9 @@ export default function MenuSection() {
                       src={item.image}
                       alt={item.name}
                       loading="lazy"
+                      onError={(e) => {
+                        e.currentTarget.style.visibility = "hidden";
+                      }}
                       className="h-16 w-16 shrink-0 rounded-md border-2 border-ink/15 object-cover"
                     />
                   ) : (

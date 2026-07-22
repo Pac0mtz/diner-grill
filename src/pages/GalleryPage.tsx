@@ -149,7 +149,7 @@ function Lightbox({
       role="dialog"
       aria-modal="true"
       aria-label={photo.alt}
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-ink/92 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-ink/97 p-4 backdrop-blur-xl"
       onClick={onClose}
     >
       <button

@@ -4,12 +4,18 @@ import type { ApiMenuItem, SelectedModifier } from "../../lib/api-types";
 import {
   computeUnitPrice,
   defaultSelections,
+  optionDisplayPriceCents,
   selectionsComplete,
 } from "../../lib/order-cart";
 import { formatCents } from "../../lib/money";
 
 type CustomizeSheetProps = {
   item: ApiMenuItem;
+  /** Prefill when editing an existing cart line. */
+  initialModifiers?: SelectedModifier[];
+  initialLineNote?: string;
+  initialQty?: number;
+  mode?: "add" | "edit";
   onClose: () => void;
   onConfirm: (payload: {
     modifiers: SelectedModifier[];
@@ -19,11 +25,21 @@ type CustomizeSheetProps = {
   }) => void;
 };
 
-export default function CustomizeSheet({ item, onClose, onConfirm }: CustomizeSheetProps) {
+export default function CustomizeSheet({
+  item,
+  initialModifiers,
+  initialLineNote = "",
+  initialQty = 1,
+  mode = "add",
+  onClose,
+  onConfirm,
+}: CustomizeSheetProps) {
   const groups = item.modifier_groups ?? [];
-  const [selections, setSelections] = useState<SelectedModifier[]>(() => defaultSelections(item));
-  const [lineNote, setLineNote] = useState("");
-  const [qty, setQty] = useState(1);
+  const [selections, setSelections] = useState<SelectedModifier[]>(
+    () => initialModifiers ?? defaultSelections(item)
+  );
+  const [lineNote, setLineNote] = useState(initialLineNote);
+  const [qty, setQty] = useState(initialQty);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -39,12 +55,23 @@ export default function CustomizeSheet({ item, onClose, onConfirm }: CustomizeSh
 
   const unitPrice = useMemo(() => computeUnitPrice(item, selections), [item, selections]);
   const complete = selectionsComplete(item, selections);
+  const modExtra = unitPrice - item.price_cents;
 
   function selectSingle(groupId: string, optionId: string) {
-    setSelections((prev) => [
-      ...prev.filter((s) => s.group_id !== groupId),
-      { group_id: groupId, option_id: optionId },
-    ]);
+    setSelections((prev) => {
+      let next = [...prev.filter((s) => s.group_id !== groupId), { group_id: groupId, option_id: optionId }];
+      // Clear egg style when switching biscuits back to plain.
+      if (groupId === "biscuits_add" && optionId === "plain") {
+        next = next.filter((s) => s.group_id !== "egg_style");
+      }
+      // Default egg style when adding eggs to biscuits.
+      if (groupId === "biscuits_add" && optionId !== "plain") {
+        if (!next.some((s) => s.group_id === "egg_style")) {
+          next.push({ group_id: "egg_style", option_id: "over_easy" });
+        }
+      }
+      return next;
+    });
   }
 
   function toggleMulti(groupId: string, optionId: string, max: number) {
@@ -56,6 +83,9 @@ export default function CustomizeSheet({ item, onClose, onConfirm }: CustomizeSh
       return [...prev, { group_id: groupId, option_id: optionId }];
     });
   }
+
+  const biscuitsPlain =
+    selections.find((s) => s.group_id === "biscuits_add")?.option_id === "plain";
 
   return (
     <div
@@ -71,15 +101,16 @@ export default function CustomizeSheet({ item, onClose, onConfirm }: CustomizeSh
       >
         <div className="flex items-start justify-between gap-3 border-b-2 border-ink/15 px-5 py-4">
           <div className="min-w-0">
-            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-chili">Customize</p>
+            <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-chili">
+              {mode === "edit" ? "Edit item" : "Customize"}
+            </p>
             <h2 id="customize-title" className="mt-1 font-display text-3xl uppercase tracking-[0.06em]">
               {item.name}
             </h2>
             <p className="mt-1 font-mono text-sm text-ink/55">
-              From {formatCents(item.price_cents)}
-              {unitPrice !== item.price_cents && (
-                <span className="text-chili"> → {formatCents(unitPrice)} each</span>
-              )}
+              Base {formatCents(item.price_cents)}
+              {modExtra > 0 && <span className="text-chili"> + {formatCents(modExtra)} options</span>}
+              <span className="text-ink/80"> · {formatCents(unitPrice)} each</span>
             </p>
           </div>
           <button
@@ -98,24 +129,36 @@ export default function CustomizeSheet({ item, onClose, onConfirm }: CustomizeSh
           )}
 
           {groups.map((group) => {
+            // Hide egg style on biscuits until eggs are added.
+            if (group.id === "egg_style" && groups.some((g) => g.id === "biscuits_add") && biscuitsPlain) {
+              return null;
+            }
+
             const multi = (group.max ?? 1) > 1;
             const selectedIds = new Set(
               selections.filter((s) => s.group_id === group.id).map((s) => s.option_id)
             );
+            const selectedCount = selectedIds.size;
+            const freeLeft =
+              group.free_count != null ? Math.max(0, group.free_count - selectedCount) : null;
+
             return (
               <fieldset key={group.id}>
                 <legend className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60">
                   {group.label}
-                  {group.required ? " *" : ""}
+                  {(group.required || (group.id === "egg_style" && !biscuitsPlain)) ? " *" : ""}
                   {group.free_count != null && (
                     <span className="ml-2 text-ink/40">
-                      · first {group.free_count} included, extras +$2.50
+                      · {freeLeft === 0
+                        ? "extras +$2.50 each"
+                        : `${freeLeft} of ${group.free_count} included left`}
                     </span>
                   )}
                 </legend>
                 <div className={`grid gap-2 ${multi ? "sm:grid-cols-2" : ""}`}>
                   {group.options.map((opt) => {
                     const checked = selectedIds.has(opt.id);
+                    const display = optionDisplayPriceCents(group, opt.id, selections);
                     return (
                       <label
                         key={opt.id}
@@ -147,11 +190,15 @@ export default function CustomizeSheet({ item, onClose, onConfirm }: CustomizeSh
                           </span>
                           {opt.label}
                         </span>
-                        <span className={`shrink-0 font-mono text-[11px] ${checked ? "text-mustard" : "text-ink/45"}`}>
-                          {opt.price_cents > 0 && !(group.free_count != null && selectedIds.size < (group.free_count || 0) && !checked)
-                            ? `+${formatCents(opt.price_cents)}`
-                            : opt.price_cents > 0 && group.free_count != null
-                              ? `+${formatCents(opt.price_cents)}`
+                        <span
+                          className={`shrink-0 font-mono text-[11px] ${
+                            checked ? "text-mustard" : "text-ink/45"
+                          }`}
+                        >
+                          {display === "included"
+                            ? "Included"
+                            : typeof display === "number"
+                              ? `+${formatCents(display)}`
                               : ""}
                         </span>
                       </label>
@@ -209,7 +256,7 @@ export default function CustomizeSheet({ item, onClose, onConfirm }: CustomizeSh
             }
             className="flex-1 rounded-md bg-chili px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream shadow-ticket transition-colors hover:bg-ember disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Add · {formatCents(unitPrice * qty)}
+            {mode === "edit" ? "Update" : "Add"} · {formatCents(unitPrice * qty)}
           </button>
         </div>
       </div>

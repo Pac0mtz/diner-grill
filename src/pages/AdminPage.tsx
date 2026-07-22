@@ -27,6 +27,7 @@ import OrdersTab from "../sections/admin/OrdersTab";
 import MenuTab from "../sections/admin/MenuTab";
 import SettingsTab from "../sections/admin/SettingsTab";
 import TransactionsTab from "../sections/admin/TransactionsTab";
+import NewOrderTakeover from "../sections/admin/NewOrderTakeover";
 
 type Tab = "dashboard" | "orders" | "transactions" | "menu" | "settings";
 
@@ -440,36 +441,29 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Main content */}
-      <div className="min-w-0 flex-1">
-        <header className="hidden border-b-2 border-ink/10 bg-paper/60 px-8 py-5 lg:block">
-          <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-ink/40">
-            Counter admin
-          </p>
-          <h1 className="mt-1 font-display text-4xl uppercase tracking-[0.06em]">{active.label}</h1>
-          <p className="mt-1 text-sm text-ink/55">{active.hint}</p>
-        </header>
-
-        <main className="px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-          <div className="mx-auto max-w-7xl">
-            <div className="mb-4 lg:hidden">
-              <h1 className="font-display text-2xl uppercase tracking-[0.06em] sm:text-3xl">
-                {active.label}
-              </h1>
-              <p className="mt-0.5 text-sm text-ink/55">{active.hint}</p>
-            </div>
-            {tab === "dashboard" && (
-              <DashboardTab
-                onUnauthorized={logout}
-                onNavigate={(id) => selectTab(id)}
-              />
-            )}
-            {tab === "orders" && <OrdersTab onUnauthorized={logout} />}
-            {tab === "transactions" && <TransactionsTab onUnauthorized={logout} />}
-            {tab === "menu" && <MenuTab onUnauthorized={logout} />}
-            {tab === "settings" && <SettingsTab onUnauthorized={logout} />}
+      {/* Main content pane — new-order overlay fills this box only (not the sidebar) */}
+      <div className="relative min-h-svh min-w-0 flex-1 lg:h-svh lg:overflow-hidden">
+        <main className="h-full overflow-y-auto px-4 py-5 sm:px-6 lg:px-6 lg:py-6 xl:px-8">
+          <div className="mb-4 lg:hidden">
+            <h1 className="font-display text-2xl uppercase tracking-[0.06em] sm:text-3xl">
+              {active.label}
+            </h1>
+            <p className="mt-0.5 text-sm text-ink/55">{active.hint}</p>
           </div>
+          {tab === "dashboard" && (
+            <DashboardTab
+              onUnauthorized={logout}
+              onNavigate={(id) => selectTab(id)}
+            />
+          )}
+          {tab === "orders" && <OrdersTab onUnauthorized={logout} />}
+          {tab === "transactions" && <TransactionsTab onUnauthorized={logout} />}
+          {tab === "menu" && <MenuTab onUnauthorized={logout} />}
+          {tab === "settings" && <SettingsTab onUnauthorized={logout} />}
         </main>
+
+        {/* Kitchen alert — absolute over this pane only */}
+        <NewOrderTakeover onUnauthorized={logout} />
       </div>
     </div>
   );

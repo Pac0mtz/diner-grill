@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
-import { Check, ShoppingBag, X } from "lucide-react";
+import { Check, ChevronUp, ShoppingBag } from "lucide-react";
 import type { ApiMenuItem, ApiMenuSection } from "../lib/api-types";
 import {
   type CartLine,
   computeUnitPrice,
   newLineKey,
+  sameCustomConfig,
 } from "../lib/order-cart";
 import { formatCents } from "../lib/money";
 import { useRouteSeo } from "../hooks/usePageMeta";
@@ -13,8 +14,13 @@ import { SITE } from "../data/site";
 import { getCustomerToken, useCustomerAuth } from "../lib/customer-auth";
 import OrderMenu from "../sections/order/OrderMenu";
 import OrderCart, { cartTotals, type CustomerInfo, type PayMethod } from "../sections/order/OrderCart";
+import CustomizeSheet from "../sections/order/CustomizeSheet";
 import PaymentStep from "../sections/order/PaymentStep";
 import OrderSuccess from "../sections/order/OrderSuccess";
+
+type SheetState =
+  | { mode: "add"; item: ApiMenuItem }
+  | { mode: "edit"; item: ApiMenuItem; line: CartLine };
 
 type Step = "shop" | "pay" | "done";
 
@@ -56,6 +62,8 @@ export default function OrderPage() {
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [stripePk, setStripePk] = useState(ENV_STRIPE_PK);
   const [payMethod, setPayMethod] = useState<PayMethod>("card");
+  const [sheet, setSheet] = useState<SheetState | null>(null);
+  const [justAdded, setJustAdded] = useState(false);
 
   const stripePromise = useMemo(() => (stripePk ? loadStripe(stripePk) : null), [stripePk]);
   const totals = cartTotals(cart);
@@ -114,6 +122,11 @@ export default function OrderPage() {
     }));
   }, [account]);
 
+  function pulseAdded() {
+    setJustAdded(true);
+    window.setTimeout(() => setJustAdded(false), 1200);
+  }
+
   function addSimple(item: ApiMenuItem) {
     setCart((prev) => {
       const existing = prev.find(
@@ -137,22 +150,52 @@ export default function OrderPage() {
       ];
     });
     setPayUnavailable(null);
+    pulseAdded();
   }
 
-  function addCustom(line: Omit<CartLine, "key"> & { key?: string }) {
-    setCart((prev) => [
-      ...prev,
-      {
-        key: line.key || newLineKey(),
-        item: line.item,
-        qty: line.qty,
-        modifiers: line.modifiers,
-        line_note: line.line_note,
-        unit_price_cents: line.unit_price_cents || computeUnitPrice(line.item, line.modifiers),
-      },
-    ]);
+  function addCustom(line: Omit<CartLine, "key">) {
+    setCart((prev) => {
+      const unit = line.unit_price_cents || computeUnitPrice(line.item, line.modifiers);
+      const match = prev.find((l) => sameCustomConfig(l, line));
+      if (match) {
+        return prev.map((l) =>
+          l.key === match.key
+            ? { ...l, qty: Math.min(50, l.qty + line.qty), unit_price_cents: unit }
+            : l
+        );
+      }
+      return [
+        ...prev,
+        {
+          key: newLineKey(),
+          item: line.item,
+          qty: line.qty,
+          modifiers: line.modifiers,
+          line_note: line.line_note,
+          unit_price_cents: unit,
+        },
+      ];
+    });
     setPayUnavailable(null);
-    setMobileCartOpen(true);
+    pulseAdded();
+  }
+
+  function updateCustom(key: string, line: Omit<CartLine, "key">) {
+    setCart((prev) =>
+      prev.map((l) =>
+        l.key === key
+          ? {
+              ...l,
+              qty: line.qty,
+              modifiers: line.modifiers,
+              line_note: line.line_note,
+              unit_price_cents:
+                line.unit_price_cents || computeUnitPrice(line.item, line.modifiers),
+            }
+          : l
+      )
+    );
+    setPayUnavailable(null);
   }
 
   function setQty(key: string, qty: number) {
@@ -266,17 +309,22 @@ export default function OrderPage() {
         <div className="mx-auto max-w-7xl px-5 py-8 md:px-8 md:py-10">
           <div className="flex flex-wrap items-end justify-between gap-5">
             <div className="min-w-0">
-              <p className="flex items-center gap-3 font-mono text-[12px] uppercase tracking-[0.3em] text-chili">
+              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] uppercase tracking-[0.3em] text-chili">
                 <span className="h-px w-10 bg-chili/60" aria-hidden />
-                Pickup · Open 24 hours
+                <span className="inline-flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-chili" aria-hidden />
+                  Accepting orders
+                </span>
+                <span className="text-ink/35">·</span>
+                <span className="text-ink/55">Pickup · ~45 min</span>
               </p>
               <h1 className="headline mt-2 text-5xl md:text-6xl lg:text-7xl">
                 Order <span className="text-chili">Online</span>
               </h1>
               {step === "shop" && (
                 <p className="mt-3 max-w-lg text-base leading-relaxed text-ink/65">
-                  Pick a section, customize your plate, pay ahead — show your order number at
-                  the counter.
+                  Browse the menu, customize your plate, then checkout for counter pickup at{" "}
+                  {SITE.address}.
                 </p>
               )}
               {step === "pay" && (
@@ -375,76 +423,105 @@ export default function OrderPage() {
                 sections={sections}
                 cart={cart}
                 onAddSimple={addSimple}
-                onAddCustom={addCustom}
+                onCustomize={(item) => setSheet({ mode: "add", item })}
                 onSetQty={setQty}
-                sidebar={
-                  <OrderCart
-                    cart={cart}
-                    onSetQty={setQty}
-                    customer={customer}
-                    onCustomerChange={setCustomer}
-                    placing={placing}
-                    error={error}
-                    payUnavailable={payUnavailable}
-                    onPlaceOrder={placeOrder}
-                    payMethod={payMethod}
-                    onPayMethodChange={setPayMethod}
-                    cardAvailable={Boolean(stripePromise)}
-                    signedIn={Boolean(account)}
-                    signedInEmail={account?.email}
-                  />
-                }
               />
             )}
           </>
         )}
       </div>
 
-      {/* Mobile cart bar + sheet */}
+      {sheet && (
+        <CustomizeSheet
+          key={
+            sheet.mode === "edit"
+              ? `edit-${sheet.line.key}`
+              : `add-${sheet.item.id}`
+          }
+          item={sheet.item}
+          mode={sheet.mode}
+          initialModifiers={sheet.mode === "edit" ? sheet.line.modifiers : undefined}
+          initialLineNote={sheet.mode === "edit" ? sheet.line.line_note : ""}
+          initialQty={sheet.mode === "edit" ? sheet.line.qty : 1}
+          onClose={() => setSheet(null)}
+          onConfirm={({ modifiers, line_note, qty, unit_price_cents }) => {
+            if (sheet.mode === "edit") {
+              updateCustom(sheet.line.key, {
+                item: sheet.item,
+                qty,
+                modifiers,
+                line_note,
+                unit_price_cents,
+              });
+            } else {
+              addCustom({
+                item: sheet.item,
+                qty,
+                modifiers,
+                line_note,
+                unit_price_cents,
+              });
+            }
+            setSheet(null);
+          }}
+        />
+      )}
+
+      {/* Floating collapsible ticket — full menu width; ticket overlays when needed */}
       {step === "shop" && menuState === "ready" && (
         <>
-          <div className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-ink bg-paper p-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] lg:hidden">
-            <button
-              type="button"
-              onClick={() => setMobileCartOpen(true)}
-              className="flex w-full items-center justify-between gap-3 rounded-md bg-chili px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream"
-            >
-              <span className="flex items-center gap-2">
-                <ShoppingBag className="h-4 w-4" aria-hidden />
-                View ticket
-                {totals.count > 0 && (
-                  <span className="rounded-full bg-cream/20 px-2 py-0.5 text-cream">{totals.count}</span>
-                )}
-              </span>
-              <span>{formatCents(totals.total)}</span>
-            </button>
-          </div>
-
-          {mobileCartOpen && (
-            <div
-              className="fixed inset-0 z-50 flex items-end bg-ink/60 lg:hidden"
-              onClick={() => setMobileCartOpen(false)}
-            >
-              <div
-                className="max-h-[88vh] w-full overflow-y-auto rounded-t-xl border-2 border-ink bg-cream"
-                onClick={(e) => e.stopPropagation()}
+          {/* Collapsed launcher */}
+          {!mobileCartOpen && (
+            <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-3 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:justify-end sm:p-0">
+              <button
+                type="button"
+                onClick={() => setMobileCartOpen(true)}
+                className={`pointer-events-auto flex w-full max-w-lg items-center justify-between gap-3 rounded-md border-2 border-ink bg-chili px-4 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream shadow-ticket transition-transform sm:w-auto sm:min-w-[17rem] ${
+                  justAdded ? "scale-[1.03] ring-2 ring-mustard ring-offset-2 ring-offset-cream" : ""
+                }`}
               >
-                <div className="sticky top-0 z-10 flex items-center justify-between border-b-2 border-ink/10 bg-cream px-4 py-3">
-                  <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink/50">Your ticket</p>
-                  <button
-                    type="button"
-                    onClick={() => setMobileCartOpen(false)}
-                    className="rounded-md border-2 border-ink/20 p-1.5"
-                    aria-label="Close cart"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-                <div className="p-3 pb-6">
+                <span className="flex items-center gap-2">
+                  <ShoppingBag className="h-4 w-4" aria-hidden />
+                  {justAdded ? "Added!" : "Your ticket"}
+                  {totals.count > 0 && (
+                    <span className="rounded-full bg-cream/20 px-2 py-0.5 text-cream">
+                      {totals.count}
+                    </span>
+                  )}
+                </span>
+                <span className="flex items-center gap-2">
+                  <span>{formatCents(totals.total)}</span>
+                  <ChevronUp className="hidden h-4 w-4 sm:block" aria-hidden />
+                </span>
+              </button>
+            </div>
+          )}
+
+          {/* Expanded floating panel */}
+          {mobileCartOpen && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-end sm:justify-end sm:p-6">
+              <button
+                type="button"
+                className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
+                aria-label="Close ticket"
+                onClick={() => setMobileCartOpen(false)}
+              />
+              <div
+                className="relative z-10 flex max-h-[min(88vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border-2 border-ink bg-cream shadow-ticket sm:rounded-lg"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Your ticket"
+              >
+                <div className="min-h-0 flex-1 overflow-y-auto">
                   <OrderCart
                     compact
                     cart={cart}
                     onSetQty={setQty}
+                    onCollapse={() => setMobileCartOpen(false)}
+                    onEditLine={(line) => {
+                      setMobileCartOpen(false);
+                      setSheet({ mode: "edit", item: line.item, line });
+                    }}
                     customer={customer}
                     onCustomerChange={setCustomer}
                     placing={placing}

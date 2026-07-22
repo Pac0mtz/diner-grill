@@ -34,8 +34,8 @@ const GROUPS = {
   bread: {
     id: "bread",
     label: "Bread",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "white_toast", label: "White toast", price_cents: 0 },
@@ -47,8 +47,8 @@ const GROUPS = {
   sandwich_bread: {
     id: "sandwich_bread",
     label: "Bread",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "regular", label: "Regular bun / bread", price_cents: 0 },
@@ -58,8 +58,8 @@ const GROUPS = {
   breakfast_sandwich_bread: {
     id: "breakfast_sandwich_bread",
     label: "Bread",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "regular", label: "Regular", price_cents: 0 },
@@ -69,8 +69,8 @@ const GROUPS = {
   chilaquiles_add: {
     id: "chilaquiles_add",
     label: "Add protein",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "none", label: "No add-on", price_cents: 0 },
@@ -82,47 +82,52 @@ const GROUPS = {
   biscuits_add: {
     id: "biscuits_add",
     label: "Make it a plate",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "plain", label: "Just biscuits & gravy", price_cents: 0 },
       { id: "eggs", label: "Add 2 eggs", price_cents: 150 },
-      { id: "eggs_meat", label: "Add 2 eggs & sausage or bacon", price_cents: 325 },
+      { id: "eggs_bacon", label: "Add 2 eggs & bacon", price_cents: 325 },
+      { id: "eggs_sausage", label: "Add 2 eggs & sausage", price_cents: 325 },
     ],
   },
   griddle_meat: {
     id: "griddle_meat",
     label: "Add meat",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "none", label: "No meat", price_cents: 0 },
-      { id: "bacon_sausage", label: "Bacon or sausage", price_cents: 200 },
+      { id: "bacon", label: "Bacon", price_cents: 200 },
+      { id: "sausage", label: "Sausage", price_cents: 200 },
       { id: "ham", label: "Ham", price_cents: 300 },
     ],
   },
   short_stack_meat: {
     id: "short_stack_meat",
     label: "Add meat",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "none", label: "No meat", price_cents: 0 },
-      { id: "meat", label: "Bacon, sausage or ham", price_cents: 125 },
+      { id: "bacon", label: "Bacon", price_cents: 125 },
+      { id: "sausage", label: "Sausage", price_cents: 125 },
+      { id: "ham", label: "Ham", price_cents: 125 },
     ],
   },
   french_toast_meat: {
     id: "french_toast_meat",
     label: "Add meat",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "none", label: "No meat", price_cents: 0 },
-      { id: "bacon_sausage", label: "Bacon or sausage", price_cents: 150 },
+      { id: "bacon", label: "Bacon", price_cents: 150 },
+      { id: "sausage", label: "Sausage", price_cents: 150 },
       { id: "ham", label: "Ham", price_cents: 200 },
     ],
   },
@@ -151,78 +156,130 @@ const GROUPS = {
   size_soup: {
     id: "size_soup",
     label: "Size",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
-      { id: "regular", label: "Regular", price_cents: 0 },
-      { id: "large", label: "Large", price_cents: 50 },
+      { id: "regular", label: "SM", price_cents: 0 },
+      { id: "large", label: "LG", price_cents: 50 },
     ],
   },
   size_chili: {
     id: "size_chili",
     label: "Size",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
-      { id: "regular", label: "Regular", price_cents: 0 },
-      { id: "large", label: "Large", price_cents: 125 },
+      { id: "regular", label: "SM", price_cents: 0 },
+      { id: "large", label: "LG", price_cents: 125 },
     ],
   },
   size_coffee_go: {
     id: "size_coffee_go",
     label: "Size",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
-      { id: "regular", label: "Regular", price_cents: 0 },
-      { id: "large", label: "Large", price_cents: 25 },
+      { id: "regular", label: "SM", price_cents: 0 },
+      { id: "large", label: "LG", price_cents: 25 },
     ],
   },
   size_soft: {
     id: "size_soft",
     label: "Size",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
-      { id: "regular", label: "Regular", price_cents: 0 },
-      { id: "large", label: "Large", price_cents: 25 },
+      { id: "regular", label: "SM", price_cents: 0 },
+      { id: "large", label: "LG", price_cents: 25 },
+    ],
+  },
+  soft_flavor: {
+    id: "soft_flavor",
+    label: "Flavor",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "coke", label: "Coke", price_cents: 0 },
+      { id: "diet_coke", label: "Diet Coke", price_cents: 0 },
+      { id: "sprite", label: "Sprite", price_cents: 0 },
+      { id: "root_beer", label: "Root beer", price_cents: 0 },
+      { id: "ginger_ale", label: "Ginger ale", price_cents: 0 },
     ],
   },
   size_juice: {
     id: "size_juice",
     label: "Size",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
-      { id: "regular", label: "Regular", price_cents: 0 },
-      { id: "large", label: "Large", price_cents: 30 },
+      { id: "regular", label: "SM", price_cents: 0 },
+      { id: "large", label: "LG", price_cents: 30 },
+    ],
+  },
+  juice_flavor: {
+    id: "juice_flavor",
+    label: "Flavor",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "orange", label: "Orange", price_cents: 0 },
+      { id: "apple", label: "Apple", price_cents: 0 },
+      { id: "cranberry", label: "Cranberry", price_cents: 0 },
+      { id: "tomato", label: "Tomato", price_cents: 0 },
     ],
   },
   size_milk: {
     id: "size_milk",
     label: "Size",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
-      { id: "regular", label: "Regular", price_cents: 0 },
-      { id: "large", label: "Large", price_cents: 100 },
+      { id: "regular", label: "SM", price_cents: 0 },
+      { id: "large", label: "LG", price_cents: 100 },
     ],
   },
   kids_meat: {
     id: "kids_meat",
     label: "Add meat",
-    required: false,
-    min: 0,
+    required: true,
+    min: 1,
     max: 1,
     options: [
       { id: "none", label: "No meat", price_cents: 0 },
-      { id: "bacon_sausage", label: "Bacon or sausage", price_cents: 200 },
+      { id: "bacon", label: "Bacon", price_cents: 200 },
+      { id: "sausage", label: "Sausage", price_cents: 200 },
+    ],
+  },
+  wing_sauce: {
+    id: "wing_sauce",
+    label: "Sauce",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "buffalo", label: "Buffalo", price_cents: 0 },
+      { id: "bbq", label: "BBQ", price_cents: 0 },
+      { id: "mild", label: "Mild", price_cents: 0 },
+      { id: "hot", label: "Hot", price_cents: 0 },
+    ],
+  },
+  churro_dip: {
+    id: "churro_dip",
+    label: "Dipping sauce",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "strawberry", label: "Strawberry", price_cents: 0 },
+      { id: "vanilla", label: "Vanilla", price_cents: 0 },
     ],
   },
   byo_fillings: {
@@ -275,17 +332,23 @@ export function modifiersForItem(sectionLabel, itemName) {
   const isBreakfastSand = section.includes("breakfast sandwich");
   const isSandwich = section === "sandwiches" || (section.includes("sandwich") && !isBreakfastSand);
   const isBurrito = section.includes("burrito");
-  const isGriddle = section.includes("pancake") || section.includes("waffle") || section.includes("french toast") || section.includes("griddle");
+  const isGriddle =
+    section.includes("pancake") ||
+    section.includes("waffle") ||
+    section.includes("french toast") ||
+    section.includes("griddle");
   const isSides = section.includes("side");
   const isDrinks = section.includes("drink");
   const isKids = section.includes("kid");
   const isChef = section.includes("chef");
+  const isDessert = section.includes("dessert");
 
   if (isBreakfastFav || isSkillet || isOmelette) {
     out.push(cloneGroup(GROUPS.egg_style));
-  }
-  if (isBreakfastFav || isSkillet || isOmelette) {
-    out.push(cloneGroup(GROUPS.bread));
+    // Slinger is listed with omelettes on the printed menu but is its own plate (no toast choice).
+    if (!(isOmelette && name.includes("slinger"))) {
+      out.push(cloneGroup(GROUPS.bread));
+    }
   }
   if (isBreakfastSand) {
     if (!name.includes("cheese") || name.includes("egg")) {
@@ -297,7 +360,6 @@ export function modifiersForItem(sectionLabel, itemName) {
     out.push(cloneGroup(GROUPS.sandwich_bread));
   }
   if (isOmelette && name.includes("build your own")) {
-    // Replace generic egg/bread still useful; BYO fillings are the main choice.
     out.push(cloneGroup(GROUPS.byo_fillings));
   }
   if (isChef) {
@@ -310,47 +372,91 @@ export function modifiersForItem(sectionLabel, itemName) {
     }
     if (name.includes("biscuit")) {
       out.push(cloneGroup(GROUPS.biscuits_add));
+      // Egg style only required when eggs are added (validated in priceLineWithModifiers).
+      const egg = cloneGroup(GROUPS.egg_style);
+      egg.required = false;
+      egg.min = 0;
+      out.push(egg);
+    }
+    if (name.includes("cuban")) {
+      out.push(cloneGroup(GROUPS.sandwich_bread));
+    }
+    if (name.includes("wing")) {
+      out.push(cloneGroup(GROUPS.wing_sauce));
     }
   }
-  if (isBurrito && name.includes("california")) {
-    out.push(cloneGroup(GROUPS.california_protein));
+  if (isBurrito) {
+    if (name.includes("california")) {
+      out.push(cloneGroup(GROUPS.california_protein));
+    }
+    if (name.includes("breakfast") || name.includes("veggie")) {
+      out.push(cloneGroup(GROUPS.egg_style));
+    }
   }
   if (isGriddle) {
     if (name.includes("alaskan")) {
       out.push(cloneGroup(GROUPS.ice_cream));
     }
-    if (name === "pancakes (3)" || name.includes("choco chip pancakes") || name === "french toast") {
-      if (name.includes("french")) out.push(cloneGroup(GROUPS.french_toast_meat));
-      else if (!name.includes("short")) out.push(cloneGroup(GROUPS.griddle_meat));
-    }
-    if (name.includes("short stack") && !name.includes("choco")) {
+    if (name.includes("french toast")) {
+      out.push(cloneGroup(GROUPS.french_toast_meat));
+    } else if (name.includes("short stack")) {
       out.push(cloneGroup(GROUPS.short_stack_meat));
-    }
-    if (name === "french toast") {
-      // already handled
+    } else if (
+      name.includes("pancake") ||
+      name.includes("waffle") ||
+      name.includes("belgian")
+    ) {
+      // Pancakes, choco chip, banana varieties, Belgian / banana waffles.
+      if (!name.includes("alaskan")) {
+        out.push(cloneGroup(GROUPS.griddle_meat));
+      }
     }
   }
   if (isSides) {
     if (name === "soup") out.push(cloneGroup(GROUPS.size_soup));
     if (name === "chili") out.push(cloneGroup(GROUPS.size_chili));
+    if (name === "toast") out.push(cloneGroup(GROUPS.bread));
+    if (name === "1 egg") out.push(cloneGroup(GROUPS.egg_style));
   }
   if (isDrinks) {
     if (name.includes("coffee to go")) out.push(cloneGroup(GROUPS.size_coffee_go));
-    if (name === "soft drinks") out.push(cloneGroup(GROUPS.size_soft));
-    if (name === "juice") out.push(cloneGroup(GROUPS.size_juice));
+    if (
+      name === "coke" ||
+      name === "diet coke" ||
+      name === "sprite" ||
+      name === "root beer" ||
+      name === "ginger ale" ||
+      name === "soft drinks"
+    ) {
+      // Legacy "Soft Drinks" kept for old tickets; flavors are separate menu items now.
+      if (name === "soft drinks") out.push(cloneGroup(GROUPS.soft_flavor));
+      out.push(cloneGroup(GROUPS.size_soft));
+    }
+    if (name === "juice") {
+      out.push(cloneGroup(GROUPS.juice_flavor));
+      out.push(cloneGroup(GROUPS.size_juice));
+    }
     if (name === "milk") out.push(cloneGroup(GROUPS.size_milk));
   }
   if (isKids && name.includes("mickey")) {
     out.push(cloneGroup(GROUPS.kids_meat));
   }
+  if (isDessert && name.includes("churro")) {
+    out.push(cloneGroup(GROUPS.churro_dip));
+  }
 
-  // Deduplicate by group id (BYO may have pushed egg+bread earlier).
   const seen = new Set();
   return out.filter((g) => {
     if (seen.has(g.id)) return false;
     seen.add(g.id);
     return true;
   });
+}
+
+function biscuitsNeedsEggStyle(picked) {
+  const choice = picked.find((s) => s && s.group_id === "biscuits_add");
+  if (!choice) return false;
+  return choice.option_id !== "plain";
 }
 
 /**
@@ -361,14 +467,20 @@ export function priceLineWithModifiers(item, sectionLabel, selections) {
   const groups = modifiersForItem(sectionLabel, item.name);
   const picked = Array.isArray(selections) ? selections : [];
   const resolved = [];
+  const needsBiscuitEgg = biscuitsNeedsEggStyle(picked);
 
   for (const group of groups) {
     const chosenIds = picked
       .filter((s) => s && s.group_id === group.id)
       .map((s) => String(s.option_id));
     const unique = [...new Set(chosenIds)];
-    const min = group.min ?? (group.required ? 1 : 0);
+    let min = group.min ?? (group.required ? 1 : 0);
     const max = group.max ?? 1;
+
+    // Biscuits: egg style required only when eggs are added.
+    if (group.id === "egg_style" && groups.some((g) => g.id === "biscuits_add")) {
+      min = needsBiscuitEgg ? 1 : 0;
+    }
 
     if (unique.length < min) {
       return { ok: false, error: `Choose ${group.label.toLowerCase()} for ${item.name}.` };
@@ -385,7 +497,8 @@ export function priceLineWithModifiers(item, sectionLabel, selections) {
     }
 
     if (group.free_count != null && group.free_count >= 0) {
-      // First N fillings included in base price; extras charged at option price.
+      // Cheapest fillings count as the included ones (selection order shouldn't change price).
+      opts.sort((a, b) => a.price_cents - b.price_cents || a.id.localeCompare(b.id));
       opts.forEach((opt, i) => {
         const charge = i < group.free_count ? 0 : opt.price_cents;
         resolved.push({
@@ -398,7 +511,6 @@ export function priceLineWithModifiers(item, sectionLabel, selections) {
       });
     } else {
       for (const opt of opts) {
-        // Skip zero-dollar "none"/"regular" noise on the ticket unless it's the only signal.
         resolved.push({
           group_id: group.id,
           group_label: group.label,
@@ -410,7 +522,6 @@ export function priceLineWithModifiers(item, sectionLabel, selections) {
     }
   }
 
-  // Reject unknown group_ids from client.
   for (const s of picked) {
     if (!s || !s.group_id) continue;
     if (!groups.some((g) => g.id === s.group_id)) {
@@ -421,9 +532,18 @@ export function priceLineWithModifiers(item, sectionLabel, selections) {
   const modTotal = resolved.reduce((sum, m) => sum + m.price_cents, 0);
   const printable = resolved.filter((m) => {
     if (m.price_cents > 0) return true;
-    // Always print egg style, protein, ice cream, BYO fillings.
-    return ["egg_style", "california_protein", "ice_cream", "byo_fillings"].includes(m.group_id)
-      || !["none", "regular", "plain", "white_toast"].includes(m.option_id);
+    return (
+      [
+        "egg_style",
+        "california_protein",
+        "ice_cream",
+        "byo_fillings",
+        "soft_flavor",
+        "juice_flavor",
+        "wing_sauce",
+        "churro_dip",
+      ].includes(m.group_id) || !["none", "regular", "plain", "white_toast"].includes(m.option_id)
+    );
   });
 
   const name_suffix = printable.map((m) => m.label).join(", ");
