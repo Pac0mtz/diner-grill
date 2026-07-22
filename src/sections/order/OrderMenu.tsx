@@ -5,6 +5,7 @@ import type { CartLine } from "../../lib/order-cart";
 import { itemHasPaidOptions, itemNeedsCustomize } from "../../lib/order-cart";
 import { formatCents } from "../../lib/money";
 import { featuredImageForSection, iconForSectionLabel } from "../../lib/menu-section-icons";
+import ProtectedImg from "../../components/ProtectedImg";
 
 const TAG_STYLES: Record<string, string> = {
   signature: "bg-chili text-cream",
@@ -83,7 +84,7 @@ export default function OrderMenu({
     <div className="min-w-0 max-w-full pb-28">
       <div className="sticky top-16 z-30 -mx-5 border-b-2 border-ink/10 bg-cream/95 backdrop-blur-md md:-mx-8">
         <div className="px-4 py-3 sm:px-5 md:px-8">
-          <p className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
+          <p className="mb-3 font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-ink/75 sm:text-[13px]">
             Menu sections
           </p>
           <div
@@ -116,15 +117,13 @@ export default function OrderMenu({
                       : "border-ink/15 bg-paper hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-ticket"
                   }`}
                 >
-                  <span className="relative block h-[5.75rem] w-full overflow-hidden bg-ink/10 sm:h-[6.75rem] md:h-[7.5rem]">
+                  <span className="relative block h-[7.75rem] w-full overflow-hidden bg-ink/10 sm:h-[9rem] md:h-[10rem]">
                     {featured ? (
-                      <img
+                      <ProtectedImg
                         src={featured}
                         alt=""
                         loading="lazy"
-                        className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-transform duration-500 sm:object-center ${
-                          selected ? "scale-105 sm:scale-[1.08]" : "scale-100 group-hover:scale-105 sm:scale-[1.02]"
-                        } [filter:brightness(1.03)_contrast(1.06)_saturate(1.08)]`}
+                        className="absolute inset-0 h-full w-full object-cover object-[center_42%] [filter:brightness(1.03)_contrast(1.06)_saturate(1.08)] sm:object-center"
                       />
                     ) : (
                       <span className="absolute inset-0 grid place-items-center bg-cream">
@@ -152,8 +151,8 @@ export default function OrderMenu({
                     </span>
                   </span>
                   <span
-                    className={`block min-h-[2.75rem] px-2.5 py-2 font-mono text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] sm:min-h-[3rem] sm:text-[11px] ${
-                      selected ? "text-cream" : "text-ink/85"
+                    className={`block min-h-[3rem] px-2.5 py-2.5 font-mono text-[11px] font-bold uppercase leading-snug tracking-[0.08em] sm:min-h-[3.25rem] sm:text-[12px] ${
+                      selected ? "text-cream" : "text-ink"
                     }`}
                   >
                     {s.label}
@@ -170,7 +169,7 @@ export default function OrderMenu({
         id={`order-panel-${active.id}`}
         role="tabpanel"
         aria-labelledby={`order-tab-${active.id}`}
-        className="stamp-in mt-5 min-w-0 rounded-lg border-2 border-ink/12 bg-paper p-3 shadow-ticket sm:mt-6 sm:p-5 md:p-7"
+        className="menu-in mt-5 min-w-0 rounded-lg border-2 border-ink/12 bg-paper p-3 shadow-ticket sm:mt-6 sm:p-5 md:p-7"
       >
         <div className="flex flex-col gap-2 border-b-2 border-ink/80 pb-3 sm:flex-row sm:items-end sm:justify-between sm:pb-4">
           <div className="min-w-0">
@@ -221,12 +220,12 @@ export default function OrderMenu({
                     >
                       <div className="relative aspect-[5/4] w-full overflow-hidden bg-ink/5 sm:aspect-[4/3]">
                         {photoSrc ? (
-                          <img
+                          <ProtectedImg
                             src={photoSrc}
                             alt=""
                             loading="lazy"
                             onError={() => markImageBroken(photoSrc)}
-                            className="h-full w-full object-cover object-[center_40%] [filter:brightness(1.03)_contrast(1.08)_saturate(1.1)] transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                            className="h-full w-full object-cover object-[center_40%] [filter:brightness(1.03)_contrast(1.08)_saturate(1.1)]"
                           />
                         ) : (
                           <span className="grid h-full w-full place-items-center text-ink/20" aria-hidden>
@@ -249,15 +248,17 @@ export default function OrderMenu({
                             {qty}
                           </span>
                         )}
-                        <span className="absolute bottom-1.5 right-1.5 rounded-md border-2 border-ink/80 bg-cream/95 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-chili backdrop-blur-sm sm:bottom-2.5 sm:right-2.5 sm:px-2 sm:py-1 sm:text-sm">
-                          {priceLabel(item)}
-                        </span>
                       </div>
 
                       <div className="flex flex-1 flex-col px-2 py-2 sm:px-3.5 sm:py-3">
-                        <h3 className="font-display text-[0.95rem] uppercase leading-tight tracking-[0.03em] sm:text-[1.25rem]">
-                          {item.name}
-                        </h3>
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="min-w-0 font-display text-[0.95rem] uppercase leading-tight tracking-[0.03em] sm:text-[1.25rem]">
+                            {item.name}
+                          </h3>
+                          <span className="shrink-0 pt-0.5 font-mono text-[12px] font-semibold tabular-nums text-chili sm:text-sm">
+                            {priceLabel(item)}
+                          </span>
+                        </div>
                         {item.description && (
                           <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-ink/50 sm:text-[13px]">
                             {item.description}

@@ -8,6 +8,7 @@ import {
 } from "../data/reviews";
 import CtaBand from "../sections/CtaBand";
 import { SITE } from "../lib/seo";
+import ProtectedImg from "../components/ProtectedImg";
 
 function formatReviewDate(iso: string): string {
   try {
@@ -152,7 +153,7 @@ function ReviewCard({ review }: { review: Review }) {
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-lg border-2 border-ink/12 bg-paper shadow-ticket">
       {review.image && (
-        <img
+        <ProtectedImg
           src={review.image}
           alt=""
           loading="lazy"

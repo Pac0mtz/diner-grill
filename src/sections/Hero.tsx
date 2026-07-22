@@ -1,6 +1,7 @@
 import { MapPin, Clock, ArrowDown, ShoppingBag } from "lucide-react";
 import { Link } from "react-router";
 import { SITE } from "../data/site";
+import ProtectedImg from "../components/ProtectedImg";
 
 export default function Hero() {
   return (
@@ -68,8 +69,8 @@ export default function Hero() {
         {/* hero photo card */}
         <div className="relative mx-auto mb-10 w-full max-w-lg self-center sm:max-w-xl lg:mb-0 lg:max-w-none lg:justify-self-end">
           <div className="rotate-2 rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket transition-transform duration-500 hover:rotate-0 md:p-4">
-            <img
-              src="/photos/hero-diner.webp"
+            <ProtectedImg
+              src="/photos/brand/hero-diner.webp"
               alt="The Diner Grill restaurant on Irving Park Road — open 24 hours"
               className="aspect-[4/3] w-full rounded-sm object-cover"
               loading="eager"
@@ -78,8 +79,8 @@ export default function Hero() {
               Irving Park Rd · open 24 hours
             </p>
           </div>
-          <img
-            src="/photos/logo-badge.webp"
+          <ProtectedImg
+            src="/photos/brand/logo-badge.webp"
             alt=""
             aria-hidden
             className="spin-slow absolute -top-8 left-6 w-24 rounded-full border-4 border-ink shadow-ticket md:-top-10 md:w-28"

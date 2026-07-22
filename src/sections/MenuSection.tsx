@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MENU } from "../data/menu";
 import { SECTION_FEATURED, SECTION_ICONS } from "../lib/menu-section-icons";
+import ProtectedImg from "../components/ProtectedImg";
 
 const TAG_STYLES: Record<string, string> = {
   signature: "bg-chili text-cream",
@@ -11,7 +12,6 @@ const TAG_STYLES: Record<string, string> = {
 export default function MenuSection() {
   const [active, setActive] = useState(MENU[0].id);
   const category = MENU.find((c) => c.id === active) ?? MENU[0];
-  const categoryHasImages = category.items.some((item) => item.image);
   const ActiveIcon = SECTION_ICONS[category.id];
 
   return (
@@ -51,15 +51,13 @@ export default function MenuSection() {
                     : "border-ink/15 bg-paper hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-ticket"
                 }`}
               >
-                <span className="relative block h-[5.75rem] w-full overflow-hidden bg-ink/10 sm:h-[6.75rem] md:h-[7.5rem]">
+                <span className="relative block h-[7.75rem] w-full overflow-hidden bg-ink/10 sm:h-[9rem] md:h-[10rem]">
                   {featured ? (
-                    <img
+                    <ProtectedImg
                       src={featured}
                       alt=""
                       loading="lazy"
-                      className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-transform duration-500 sm:object-center ${
-                        selected ? "scale-105 sm:scale-[1.08]" : "scale-100 group-hover:scale-105"
-                      }`}
+                      className="absolute inset-0 h-full w-full object-cover object-[center_42%] sm:object-center"
                     />
                   ) : (
                     <span className="absolute inset-0 grid place-items-center bg-cream">
@@ -77,8 +75,8 @@ export default function MenuSection() {
                   )}
                 </span>
                 <span
-                  className={`block min-h-[2.75rem] px-2.5 py-2 font-mono text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] sm:min-h-[3rem] sm:text-[11px] ${
-                    selected ? "text-cream" : "text-ink/85"
+                  className={`block min-h-[3rem] px-2.5 py-2.5 font-mono text-[11px] font-bold uppercase leading-snug tracking-[0.08em] sm:min-h-[3.25rem] sm:text-[12px] ${
+                    selected ? "text-cream" : "text-ink"
                   }`}
                 >
                   {c.label}
@@ -104,45 +102,30 @@ export default function MenuSection() {
             )}
           </div>
 
-          <ul key={category.id} className="mt-8 grid gap-x-14 gap-y-7 md:grid-cols-2">
-            {category.items.map((item, i) => (
-              <li key={item.name} className="stamp-in flex items-start gap-4" style={{ animationDelay: `${i * 45}ms` }}>
-                {categoryHasImages &&
-                  (item.image ? (
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.style.visibility = "hidden";
-                      }}
-                      className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-md border-2 border-ink/15 object-cover object-[center_40%] sm:h-20 sm:w-20"
-                    />
-                  ) : (
-                    <span className="h-[4.5rem] w-[4.5rem] shrink-0 sm:h-20 sm:w-20" aria-hidden />
-                  ))}
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline gap-3">
-                    <span className="leader flex-1 font-display text-[1.35rem] uppercase tracking-[0.04em] sm:text-[1.55rem]">
-                      <span>
-                        {item.name}
-                        {item.tag && (
-                          <span
-                            className={`ml-2 inline-block -translate-y-0.5 rounded-sm px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.14em] ${TAG_STYLES[item.tag]}`}
-                          >
-                            {item.tag}
-                          </span>
-                        )}
-                      </span>
+          {/* Text-only list — photos live on the category tabs above */}
+          <ul key={category.id} className="menu-in mt-8 grid gap-x-14 gap-y-6 md:grid-cols-2">
+            {category.items.map((item) => (
+              <li key={item.name} className="min-w-0">
+                <div className="flex items-baseline gap-3">
+                  <span className="leader flex-1 font-display text-[1.35rem] uppercase tracking-[0.04em] sm:text-[1.55rem]">
+                    <span>
+                      {item.name}
+                      {item.tag && (
+                        <span
+                          className={`ml-2 inline-block -translate-y-0.5 rounded-sm px-2 py-0.5 align-middle font-mono text-[10px] uppercase tracking-[0.14em] ${TAG_STYLES[item.tag]}`}
+                        >
+                          {item.tag}
+                        </span>
+                      )}
                     </span>
-                    <span className="shrink-0 whitespace-nowrap font-mono text-base font-medium text-chili sm:text-lg">
-                      ${item.price}
-                    </span>
-                  </div>
-                  {item.description && (
-                    <p className="mt-1.5 text-sm leading-relaxed text-ink/60">{item.description}</p>
-                  )}
+                  </span>
+                  <span className="shrink-0 whitespace-nowrap font-mono text-base font-medium text-chili sm:text-lg">
+                    ${item.price}
+                  </span>
                 </div>
+                {item.description && (
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink/60">{item.description}</p>
+                )}
               </li>
             ))}
           </ul>

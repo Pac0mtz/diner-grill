@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { HOME_GALLERY_PHOTOS } from "../data/gallery";
+import ProtectedImg from "../components/ProtectedImg";
 
 const PHOTOS = HOME_GALLERY_PHOTOS;
 
@@ -67,7 +68,7 @@ export default function Gallery() {
                 i % 2 === 0 ? "-rotate-1" : "rotate-1"
               }`}
             >
-              <img src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/3] w-full rounded-sm object-cover" />
+              <ProtectedImg src={p.src} alt={p.alt} loading="lazy" className="aspect-[4/3] w-full rounded-sm object-cover" />
               <span className="block px-1 pb-1 pt-2 font-mono text-[10px] uppercase tracking-[0.18em] text-ink/55">
                 {p.alt}
               </span>
@@ -117,7 +118,7 @@ export default function Gallery() {
             className="max-w-4xl rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
+            <ProtectedImg
               src={PHOTOS[active].src}
               alt={PHOTOS[active].alt}
               className="max-h-[72vh] w-full rounded-sm object-contain"

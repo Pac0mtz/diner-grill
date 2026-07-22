@@ -1,4 +1,5 @@
 import { Award, Flame } from "lucide-react";
+import ProtectedImg from "../components/ProtectedImg";
 
 const LAYERS = [
   { n: "01", label: "Crispy hash browns" },
@@ -53,8 +54,8 @@ export default function Slinger() {
 
         {/* layered build card */}
         <div className="relative">
-          <img
-            src="/photos/slinger.webp"
+          <ProtectedImg
+            src="/photos/omelettes/slinger.webp"
             alt="A real Slinger fresh off the Diner Grill griddle, covered in chili"
             loading="lazy"
             className="swing absolute -top-12 right-6 z-10 w-40 rounded-sm border-4 border-cream object-cover shadow-ticket md:w-48"

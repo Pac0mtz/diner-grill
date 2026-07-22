@@ -8,6 +8,7 @@ import {
   selectionsComplete,
 } from "../../lib/order-cart";
 import { formatCents } from "../../lib/money";
+import ProtectedImg from "../../components/ProtectedImg";
 
 type CustomizeSheetProps = {
   item: ApiMenuItem;
@@ -102,7 +103,7 @@ export default function CustomizeSheet({
       >
         {item.image && (
           <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-ink/5 sm:aspect-[5/3]">
-            <img
+            <ProtectedImg
               src={item.image}
               alt=""
               className="h-full w-full object-cover object-[center_40%] [filter:brightness(1.03)_contrast(1.06)_saturate(1.08)]"

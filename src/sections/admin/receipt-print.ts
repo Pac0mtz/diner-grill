@@ -117,7 +117,7 @@ export function buildReceiptHtml(order: AdminOrder): string {
 </head>
 <body>
   <div class="center">
-    <img class="logo" src="/photos/logo-badge.webp" alt="" onerror="this.style.display='none'" />
+    <img class="logo" src="/photos/brand/logo-badge.webp" alt="" onerror="this.style.display='none'" />
     <div class="shop-name">Diner Grill</div>
     <div class="tagline">Chicago &middot; Open 24 Hours</div>
     <div class="addr">${esc(SITE.address)}<br/>${esc(SITE.phone)}</div>

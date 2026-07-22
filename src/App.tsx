@@ -2,6 +2,7 @@ import { Routes, Route, Outlet } from "react-router";
 import Navbar from "./sections/Navbar";
 import Footer from "./sections/Footer";
 import ScrollToTop from "./components/ScrollToTop";
+import ImageGuard from "./components/ImageGuard";
 import Home from "./pages/Home";
 import StoryPage from "./pages/StoryPage";
 import MenuPage from "./pages/MenuPage";
@@ -34,6 +35,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <ImageGuard />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Home />} />

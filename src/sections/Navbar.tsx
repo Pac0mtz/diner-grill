@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router";
 import { Phone, ShoppingBag, Menu as MenuIcon, X, UserRound } from "lucide-react";
 import { SITE } from "../data/site";
 import { useCustomerAuth } from "../lib/customer-auth";
+import ProtectedImg from "../components/ProtectedImg";
 
 const LINKS = [
   { to: "/", label: "Home" },
@@ -39,8 +40,8 @@ export default function Navbar() {
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-8">
         <Link to="/" className="flex items-center gap-3" aria-label="Diner Grill — home">
-          <img
-            src="/photos/logo-badge.webp"
+          <ProtectedImg
+            src="/photos/brand/logo-badge.webp"
             alt="Diner Grill logo — Home of the Slinger, est. 1937"
             className="h-10 w-10 rounded-full border-2 border-chili object-cover"
           />

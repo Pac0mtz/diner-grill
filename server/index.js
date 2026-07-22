@@ -10,7 +10,7 @@ import bcrypt from "bcryptjs";
 import { loadEnv } from "./env.js";
 import { query, initDb, TAX_RATE, ORDER_STATUSES, getSetting, setSetting, parseOrder, pool } from "./db.js";
 import { seedIfEmpty } from "./seed.js";
-import { syncMenu } from "./sync-menu.js";
+import { syncMenu, backfillImagesFromSeed } from "./sync-menu.js";
 import { fetchGoogleReviews } from "./google-reviews.js";
 import {
   getMailPrintConfig,
@@ -138,6 +138,15 @@ if (await seedIfEmpty()) {
     `[server] SYNC_MENU=1 — sections +${c.sectionsInserted}/${c.sectionsUpdated} updated, ` +
       `items +${c.itemsInserted}/${c.itemsUpdated} updated/${c.itemsDeactivated} deactivated`
   );
+}
+
+// Always backfill item photos from the seed menu when items have no image or
+// still reference legacy .jpg files (safe: never overwrites admin uploads).
+try {
+  const n = await backfillImagesFromSeed();
+  if (n > 0) console.log(`[server] Backfilled ${n} item photo(s) from seed menu`);
+} catch (err) {
+  console.error("[server] image backfill failed:", err.message);
 }
 
 const app = express();

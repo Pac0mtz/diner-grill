@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { useReveal } from "../hooks/useReveal";
+import ProtectedImg from "../components/ProtectedImg";
 
 const PHOTOS = [
   {
-    src: "/photos/patio-3.webp",
+    src: "/photos/patio/patio-3.webp",
     alt: "Garden patio tables under hanging wisteria and string lights",
   },
   {
-    src: "/photos/patio-5.webp",
+    src: "/photos/patio/patio-5.webp",
     alt: "Wisteria canopy and a tree growing through the patio",
   },
   {
-    src: "/photos/patio-6.webp",
+    src: "/photos/patio/patio-6.webp",
     alt: "Patio seating along the brick wall under hanging flowers",
   },
 ];
@@ -89,7 +90,7 @@ export default function Patio() {
         className="relative mt-12 block w-full cursor-zoom-in overflow-hidden aspect-square md:aspect-[2.4/1]"
       >
         {PHOTOS.map((p, i) => (
-          <img
+          <ProtectedImg
             key={p.src}
             src={p.src}
             alt={i === featured ? p.alt : ""}
@@ -123,7 +124,7 @@ export default function Patio() {
                     : "border-ink/15 hover:border-ink/40"
                 }`}
               >
-                <img
+                <ProtectedImg
                   src={p.src}
                   alt={p.alt}
                   loading="lazy"
@@ -181,7 +182,7 @@ export default function Patio() {
             className="stamp-in max-w-5xl rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
+            <ProtectedImg
               src={PHOTOS[lightbox].src}
               alt={PHOTOS[lightbox].alt}
               className={`max-h-[78vh] w-full rounded-sm object-contain ${PHOTO_LOOK}`}

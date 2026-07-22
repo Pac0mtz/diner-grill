@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Flame, Wrench, Store, X } from "lucide-react";
 import { PRESS } from "../data/menu";
 import { useReveal } from "../hooks/useReveal";
+import ProtectedImg from "../components/ProtectedImg";
 
 /** Built · Broken · Rebuilt — photo + chapter copy in one card each. */
 const CHAPTERS = [
@@ -92,7 +93,7 @@ export default function Story() {
                 className="relative aspect-[4/3] w-full overflow-hidden bg-ink/5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-chili"
                 aria-label={`View larger: ${c.alt}`}
               >
-                <img
+                <ProtectedImg
                   src={c.src}
                   alt={c.alt}
                   className={`h-full w-full transition-transform duration-500 group-hover:scale-[1.03] ${PHOTO_LOOK}`}
@@ -150,7 +151,7 @@ export default function Story() {
             <X className="h-6 w-6" />
           </button>
           <figure className="relative max-h-[90vh] max-w-5xl" onClick={(e) => e.stopPropagation()}>
-            <img
+            <ProtectedImg
               src={active.src}
               alt={active.alt}
               className={`max-h-[80vh] w-full rounded-sm object-contain ${PHOTO_LOOK}`}

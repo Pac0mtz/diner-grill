@@ -8,6 +8,7 @@ import {
   type GalleryPhoto,
 } from "../data/gallery";
 import CtaBand from "../sections/CtaBand";
+import ProtectedImg from "../components/ProtectedImg";
 
 export default function GalleryPage() {
   useRouteSeo("/gallery");
@@ -118,7 +119,7 @@ function GalleryThumb({ photo, onOpen }: { photo: GalleryPhoto; onOpen: () => vo
       aria-label={`Enlarge photo: ${photo.alt}`}
       className="group w-full overflow-hidden rounded-md border-2 border-ink/12 bg-paper p-2 text-left shadow-ticket transition-transform duration-300 hover:-translate-y-1"
     >
-      <img
+      <ProtectedImg
         src={photo.src}
         alt={photo.alt}
         loading="lazy"
@@ -185,7 +186,7 @@ function Lightbox({
         className="max-w-5xl rounded-md border-4 border-cream/90 bg-cream p-3 shadow-ticket"
         onClick={(e) => e.stopPropagation()}
       >
-        <img
+        <ProtectedImg
           src={photo.src}
           alt={photo.alt}
           className="max-h-[72vh] w-full rounded-sm object-contain transition-opacity duration-300"

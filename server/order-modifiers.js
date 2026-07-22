@@ -23,25 +23,29 @@ const GROUPS = {
     min: 1,
     max: 1,
     options: [
+      { id: "sunny_side", label: "Sunny side up", price_cents: 0 },
       { id: "over_easy", label: "Over easy", price_cents: 0 },
       { id: "over_medium", label: "Over medium", price_cents: 0 },
       { id: "over_hard", label: "Over hard", price_cents: 0 },
+      { id: "fried", label: "Fried", price_cents: 0 },
       { id: "scrambled", label: "Scrambled", price_cents: 0 },
-      { id: "sunny_side", label: "Sunny side up", price_cents: 0 },
-      { id: "poached", label: "Poached", price_cents: 0 },
+      { id: "egg_whites", label: "Egg whites", price_cents: 100 },
     ],
   },
   bread: {
     id: "bread",
-    label: "Bread",
+    label: "Toast",
     required: true,
     min: 1,
     max: 1,
     options: [
-      { id: "white_toast", label: "White toast", price_cents: 0 },
-      { id: "wheat_toast", label: "Wheat toast", price_cents: 0 },
-      { id: "rye_toast", label: "Rye toast", price_cents: 0 },
-      { id: "french_bread", label: "French bread", price_cents: 165 },
+      { id: "none", label: "None", price_cents: 0 },
+      { id: "white_toast", label: "White", price_cents: 0 },
+      { id: "wheat_toast", label: "Wheat", price_cents: 0 },
+      { id: "rye_toast", label: "Rye", price_cents: 0 },
+      { id: "sourdough", label: "Sourdough", price_cents: 0 },
+      { id: "raisin", label: "Raisin", price_cents: 0 },
+      { id: "english_muffin", label: "English muffin", price_cents: 50 },
     ],
   },
   sandwich_bread: {
@@ -64,6 +68,69 @@ const GROUPS = {
     options: [
       { id: "regular", label: "Regular", price_cents: 0 },
       { id: "french_bread", label: "French bread", price_cents: 165 },
+    ],
+  },
+  steak_temp: {
+    id: "steak_temp",
+    label: "Meat preparation",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "rare", label: "Rare", price_cents: 0 },
+      { id: "medium_rare", label: "Medium rare", price_cents: 0 },
+      { id: "medium", label: "Medium", price_cents: 0 },
+      { id: "medium_well", label: "Medium well", price_cents: 0 },
+      { id: "well_done", label: "Well done", price_cents: 0 },
+    ],
+  },
+  catfish_style: {
+    id: "catfish_style",
+    label: "Preparation",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "grilled", label: "Grilled", price_cents: 0 },
+      { id: "breaded", label: "Breaded", price_cents: 0 },
+    ],
+  },
+  milkshake_flavor: {
+    id: "milkshake_flavor",
+    label: "Flavor",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "chocolate", label: "Chocolate", price_cents: 0 },
+      { id: "vanilla", label: "Vanilla", price_cents: 0 },
+      { id: "strawberry", label: "Strawberry", price_cents: 0 },
+      { id: "oreo", label: "Oreo", price_cents: 0 },
+      { id: "pina_colada", label: "Piña colada", price_cents: 0 },
+      { id: "banana", label: "Banana", price_cents: 0 },
+      { id: "coffee", label: "Coffee", price_cents: 0 },
+    ],
+  },
+  wing_dip: {
+    id: "wing_dip",
+    label: "Dipping sauce",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "ranch", label: "Ranch", price_cents: 0 },
+      { id: "blue_cheese", label: "Blue cheese", price_cents: 0 },
+    ],
+  },
+  add_soup: {
+    id: "add_soup",
+    label: "Add soup",
+    required: true,
+    min: 1,
+    max: 1,
+    options: [
+      { id: "none", label: "No soup", price_cents: 0 },
+      { id: "soup", label: "Soup of the day", price_cents: 150 },
     ],
   },
   chilaquiles_add: {
@@ -100,9 +167,9 @@ const GROUPS = {
     max: 1,
     options: [
       { id: "none", label: "No meat", price_cents: 0 },
-      { id: "bacon", label: "Bacon", price_cents: 200 },
-      { id: "sausage", label: "Sausage", price_cents: 200 },
-      { id: "ham", label: "Ham", price_cents: 300 },
+      { id: "bacon", label: "Bacon", price_cents: 150 },
+      { id: "sausage", label: "Sausage", price_cents: 150 },
+      { id: "ham", label: "Ham", price_cents: 200 },
     ],
   },
   short_stack_meat: {
@@ -113,9 +180,9 @@ const GROUPS = {
     max: 1,
     options: [
       { id: "none", label: "No meat", price_cents: 0 },
-      { id: "bacon", label: "Bacon", price_cents: 125 },
-      { id: "sausage", label: "Sausage", price_cents: 125 },
-      { id: "ham", label: "Ham", price_cents: 125 },
+      { id: "bacon", label: "Bacon", price_cents: 150 },
+      { id: "sausage", label: "Sausage", price_cents: 150 },
+      { id: "ham", label: "Ham", price_cents: 200 },
     ],
   },
   french_toast_meat: {
@@ -232,7 +299,7 @@ const GROUPS = {
       { id: "orange", label: "Orange", price_cents: 0 },
       { id: "apple", label: "Apple", price_cents: 0 },
       { id: "cranberry", label: "Cranberry", price_cents: 0 },
-      { id: "tomato", label: "Tomato", price_cents: 0 },
+      { id: "lemonade", label: "Lemonade", price_cents: 0 },
     ],
   },
   size_milk: {
@@ -345,19 +412,33 @@ export function modifiersForItem(sectionLabel, itemName) {
 
   if (isBreakfastFav || isSkillet || isOmelette) {
     out.push(cloneGroup(GROUPS.egg_style));
-    // Slinger is listed with omelettes on the printed menu but is its own plate (no toast choice).
+    // Slinger is its own plate — no toast choice (matches live menu).
     if (!(isOmelette && name.includes("slinger"))) {
       out.push(cloneGroup(GROUPS.bread));
     }
+    if (name.includes("strip steak")) {
+      out.push(cloneGroup(GROUPS.steak_temp));
+    }
   }
   if (isBreakfastSand) {
-    if (!name.includes("cheese") || name.includes("egg")) {
+    // Ham & Cheese sandwich has no egg style on the live menu.
+    if (!(name.includes("ham & cheese") && !name.includes("egg"))) {
       out.push(cloneGroup(GROUPS.egg_style));
     }
     out.push(cloneGroup(GROUPS.breakfast_sandwich_bread));
   }
   if (isSandwich) {
     out.push(cloneGroup(GROUPS.sandwich_bread));
+    if (name.includes("strip steak")) {
+      out.push(cloneGroup(GROUPS.steak_temp));
+    }
+    if (name.includes("catfish")) {
+      out.push(cloneGroup(GROUPS.catfish_style));
+    }
+    // Live menu offers soup add-on on Cubano / grilled cheese & bacon.
+    if (name.includes("cubano") || (name.includes("grilled cheese") && name.includes("bacon"))) {
+      out.push(cloneGroup(GROUPS.add_soup));
+    }
   }
   if (isOmelette && name.includes("build your own")) {
     out.push(cloneGroup(GROUPS.byo_fillings));
@@ -378,11 +459,13 @@ export function modifiersForItem(sectionLabel, itemName) {
       egg.min = 0;
       out.push(egg);
     }
-    if (name.includes("cuban")) {
+    if (name.includes("cubano")) {
       out.push(cloneGroup(GROUPS.sandwich_bread));
+      out.push(cloneGroup(GROUPS.add_soup));
     }
     if (name.includes("wing")) {
       out.push(cloneGroup(GROUPS.wing_sauce));
+      out.push(cloneGroup(GROUPS.wing_dip));
     }
   }
   if (isBurrito) {
@@ -406,7 +489,6 @@ export function modifiersForItem(sectionLabel, itemName) {
       name.includes("waffle") ||
       name.includes("belgian")
     ) {
-      // Pancakes, choco chip, banana varieties, Belgian / banana waffles.
       if (!name.includes("alaskan")) {
         out.push(cloneGroup(GROUPS.griddle_meat));
       }
@@ -433,8 +515,9 @@ export function modifiersForItem(sectionLabel, itemName) {
   if (isKids && name.includes("mickey")) {
     out.push(cloneGroup(GROUPS.kids_meat));
   }
-  if (isDessert && name.includes("churro")) {
-    out.push(cloneGroup(GROUPS.churro_dip));
+  if (isDessert) {
+    if (name.includes("churro")) out.push(cloneGroup(GROUPS.churro_dip));
+    if (name.includes("milkshake")) out.push(cloneGroup(GROUPS.milkshake_flavor));
   }
 
   const seen = new Set();
@@ -532,7 +615,11 @@ export function priceLineWithModifiers(item, sectionLabel, selections) {
         "byo_fillings",
         "soft_flavor",
         "juice_flavor",
+        "milkshake_flavor",
         "wing_sauce",
+        "wing_dip",
+        "catfish_style",
+        "steak_temp",
         "churro_dip",
       ].includes(m.group_id) || !["none", "regular", "plain", "white_toast"].includes(m.option_id)
     );

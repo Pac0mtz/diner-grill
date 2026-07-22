@@ -100,6 +100,27 @@ export async function syncMenu() {
   return counts;
 }
 
+// Lightweight, always-safe startup backfill: point items at the seed menu's
+// photo when they have no image or still reference a legacy .jpg/.jpeg file.
+// Never touches prices, availability, or admin-uploaded /uploads/ images.
+export async function backfillImagesFromSeed() {
+  const rows = [];
+  for (const cat of MENU) {
+    for (const item of cat.items) {
+      if (item.image) rows.push([item.name, item.image]);
+    }
+  }
+  if (!rows.length) return 0;
+  const res = await pool.query(
+    `UPDATE items i SET image = v.image
+       FROM (SELECT unnest($1::text[]) AS name, unnest($2::text[]) AS image) v
+      WHERE i.name = v.name
+        AND (i.image IS NULL OR i.image = '' OR i.image ~* '\\.jpe?g$')`,
+    [rows.map((r) => r[0]), rows.map((r) => r[1])]
+  );
+  return res.rowCount ?? 0;
+}
+
 // Allow running directly: `npm run sync-menu`
 if (import.meta.url === `file://${process.argv[1]}`) {
   await initDb();

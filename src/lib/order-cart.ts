@@ -108,7 +108,11 @@ export function formatModifierSummary(item: ApiMenuItem, selections: SelectedMod
         "byo_fillings",
         "soft_flavor",
         "juice_flavor",
+        "milkshake_flavor",
         "wing_sauce",
+        "wing_dip",
+        "catfish_style",
+        "steak_temp",
         "churro_dip",
       ].includes(group.id);
       if (!alwaysShow && SKIP_SUMMARY_IDS.has(opt.id)) continue;
@@ -149,9 +153,13 @@ export function defaultSelections(item: ApiMenuItem): SelectedModifier[] {
     const min = group.min ?? (group.required ? 1 : 0);
     const preferred =
       group.options.find((o) => o.id === "over_easy") ||
+      group.options.find((o) => o.id === "medium") ||
+      group.options.find((o) => o.id === "grilled") ||
       group.options.find((o) => o.id === "steak") ||
+      group.options.find((o) => o.id === "chocolate") ||
       group.options.find((o) => o.id === "vanilla") ||
       group.options.find((o) => o.id === "buffalo") ||
+      group.options.find((o) => o.id === "ranch") ||
       group.options.find((o) => o.id === "strawberry") ||
       group.options.find((o) => o.id === "coke") ||
       group.options.find((o) => o.id === "orange") ||

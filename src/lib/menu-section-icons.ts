@@ -40,19 +40,19 @@ export const SECTION_ICONS: Record<string, MenuSectionIcon> = {
 
 /** Featured card image for each order-page section tab. */
 export const SECTION_FEATURED: Record<string, string> = {
-  breakfast: "/photos/breakfast-bacon-eggs.webp",
-  "breakfast-sandwiches": "/photos/breakfast-bacon-egg.webp",
-  skillets: "/photos/skillet-california.webp",
-  omelettes: "/photos/omelette-denver.webp",
-  "chefs-creations": "/photos/biscuits-gravy.webp",
-  "pancakes-waffles": "/photos/waffle-banana-nutella.webp",
-  "french-toast": "/photos/french-toast.webp",
-  sandwiches: "/photos/cheeseburger.webp",
-  burritos: "/photos/burrito-breakfast.webp",
-  sides: "/photos/fries.webp",
-  kids: "/photos/mickey-pancake.webp",
-  desserts: "/photos/churros.webp",
-  drinks: "/photos/soda-coke.webp",
+  breakfast: "/photos/breakfast/breakfast-bacon-eggs.webp",
+  "breakfast-sandwiches": "/photos/breakfast-sandwiches/breakfast-bacon-egg.webp",
+  skillets: "/photos/skillets/skillet-california.webp",
+  omelettes: "/photos/omelettes/omelette-denver.webp",
+  "chefs-creations": "/photos/chefs-creations/biscuits-gravy.webp",
+  "pancakes-waffles": "/photos/pancakes-waffles/waffle-banana-nutella.webp",
+  "french-toast": "/photos/french-toast/french-toast.webp",
+  sandwiches: "/photos/sandwiches/cheeseburger.webp",
+  burritos: "/photos/burritos/burrito-breakfast.webp",
+  sides: "/photos/sides/fries.webp",
+  kids: "/photos/kids/mickey-pancake.webp",
+  desserts: "/photos/desserts/churros.webp",
+  drinks: "/photos/drinks/soda-coke.webp",
 };
 
 function sectionIdFromLabel(label: string): string | null {
