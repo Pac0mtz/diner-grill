@@ -776,11 +776,11 @@ function unlinkUploadIfOwned(imageUrl) {
   }
 }
 
-// POST /api/admin/upload — {filename, dataBase64} → {url}. No multer needed.
+// POST /api/admin/upload — {filename, dataBase64} → {url}. Converts to WebP for faster loads.
 app.post("/api/admin/upload", adminAuth, h(async (req, res) => {
   const { filename, dataBase64 } = req.body || {};
   if (!filename || typeof filename !== "string") return bad(res, 400, "filename is required.");
-  if (!dataBase64 || typeof dataBase64 !== "string") return bad(res, 400, "dataBase64 is required.");
+  if (!dataBase64 || typeof dataBase64 !== "string") return bad(res, 400, "dataBase64 is not valid base64.");
   const ext = path.extname(filename).toLowerCase().replace(".", "");
   if (!UPLOAD_EXTS.has(ext)) {
     return bad(res, 400, "Only jpg, jpeg, png or webp images are allowed.");
@@ -795,9 +795,22 @@ app.post("/api/admin/upload", adminAuth, h(async (req, res) => {
   if (buf.length > MAX_UPLOAD_BYTES) {
     return bad(res, 400, "Image is too large — 4MB max.");
   }
-  const safeName = `${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}.${ext}`;
-  fs.writeFileSync(path.join(UPLOAD_DIR, safeName), buf);
-  console.log(`[upload] saved ${safeName} (${buf.length} bytes)`);
+
+  let out;
+  try {
+    const sharp = (await import("sharp")).default;
+    out = await sharp(buf)
+      .rotate()
+      .resize({ width: 1280, withoutEnlargement: true })
+      .webp({ quality: 82, effort: 5, smartSubsample: true })
+      .toBuffer();
+  } catch {
+    return bad(res, 400, "Could not process that image — try another file.");
+  }
+
+  const safeName = `${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}.webp`;
+  fs.writeFileSync(path.join(UPLOAD_DIR, safeName), out);
+  console.log(`[upload] saved ${safeName} (${out.length} bytes, from ${buf.length})`);
   res.status(201).json({ url: `/uploads/${safeName}` });
 }));
 

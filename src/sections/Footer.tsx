@@ -7,7 +7,7 @@ export default function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col items-center gap-8 px-5 md:flex-row md:justify-between md:px-8">
         <div className="flex items-center gap-3">
           <img
-            src="/photos/logo-badge.jpg"
+            src="/photos/logo-badge.webp"
             alt="Diner Grill logo"
             className="h-10 w-10 rounded-full border-2 border-chili object-cover"
           />

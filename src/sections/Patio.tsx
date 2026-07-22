@@ -4,15 +4,15 @@ import { useReveal } from "../hooks/useReveal";
 
 const PHOTOS = [
   {
-    src: "/photos/patio-3.jpg",
+    src: "/photos/patio-3.webp",
     alt: "Garden patio tables under hanging wisteria and string lights",
   },
   {
-    src: "/photos/patio-5.jpg",
+    src: "/photos/patio-5.webp",
     alt: "Wisteria canopy and a tree growing through the patio",
   },
   {
-    src: "/photos/patio-6.jpg",
+    src: "/photos/patio-6.webp",
     alt: "Patio seating along the brick wall under hanging flowers",
   },
 ];

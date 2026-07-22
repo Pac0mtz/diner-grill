@@ -40,7 +40,7 @@ export default function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-3 md:px-8">
         <Link to="/" className="flex items-center gap-3" aria-label="Diner Grill — home">
           <img
-            src="/photos/logo-badge.jpg"
+            src="/photos/logo-badge.webp"
             alt="Diner Grill logo — Home of the Slinger, est. 1937"
             className="h-10 w-10 rounded-full border-2 border-chili object-cover"
           />

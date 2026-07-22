@@ -6,7 +6,6 @@ import { itemHasPaidOptions, itemNeedsCustomize } from "../../lib/order-cart";
 import { formatCents } from "../../lib/money";
 import { featuredImageForSection, iconForSectionLabel } from "../../lib/menu-section-icons";
 
-
 const TAG_STYLES: Record<string, string> = {
   signature: "bg-chili text-cream",
   popular: "bg-mustard text-ink",
@@ -58,7 +57,6 @@ export default function OrderMenu({
     );
   }, [sections]);
 
-  // Keep the active tab visible in the horizontal scroller.
   useEffect(() => {
     if (activeId == null) return;
     const btn = tabRefs.current.get(activeId);
@@ -67,28 +65,22 @@ export default function OrderMenu({
 
   const active = sections.find((s) => s.id === activeId) ?? sections[0] ?? null;
 
-  function handleAddClick(item: ApiMenuItem) {
-    if (itemNeedsCustomize(item)) onCustomize(item);
-    else onAddSimple(item);
-  }
-
   function priceLabel(item: ApiMenuItem) {
     const paid = itemHasPaidOptions(item);
     return paid ? `From ${formatCents(item.price_cents)}` : formatCents(item.price_cents);
   }
 
-  function selectSection(id: number) {
-    setActiveId(id);
+  /** Tap card → details / customize sheet (works for simple items too). */
+  function openDetails(item: ApiMenuItem) {
+    onCustomize(item);
   }
 
   if (!active) return null;
 
-  const sectionHasImages = active.items.some((item) => item.image);
   const ActiveIcon = iconForSectionLabel(active.label);
 
   return (
     <div className="min-w-0 max-w-full pb-28">
-      {/* Full-width featured section cards — image full-bleed on top */}
       <div className="sticky top-16 z-30 -mx-5 border-b-2 border-ink/10 bg-cream/95 backdrop-blur-md md:-mx-8">
         <div className="px-4 py-3 sm:px-5 md:px-8">
           <p className="mb-2.5 font-mono text-[10px] uppercase tracking-[0.22em] text-ink/40">
@@ -117,22 +109,21 @@ export default function OrderMenu({
                   aria-selected={selected}
                   aria-controls={`order-panel-${s.id}`}
                   id={`order-tab-${s.id}`}
-                  onClick={() => selectSection(s.id)}
+                  onClick={() => setActiveId(s.id)}
                   className={`group relative w-[9.25rem] shrink-0 snap-start overflow-hidden rounded-lg border-2 text-left transition-all sm:w-[10.5rem] md:w-[11.25rem] ${
                     selected
                       ? "border-ink bg-ink shadow-ticket ring-2 ring-mustard/80"
                       : "border-ink/15 bg-paper hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-ticket"
                   }`}
                 >
-                  {/* Full-bleed featured image */}
                   <span className="relative block h-[5.75rem] w-full overflow-hidden bg-ink/10 sm:h-[6.75rem] md:h-[7.5rem]">
                     {featured ? (
                       <img
                         src={featured}
                         alt=""
                         loading="lazy"
-                        className={`absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 ${
-                          selected ? "scale-[1.12]" : "scale-[1.08] group-hover:scale-[1.14]"
+                        className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-transform duration-500 sm:object-center ${
+                          selected ? "scale-105 sm:scale-[1.08]" : "scale-100 group-hover:scale-105 sm:scale-[1.02]"
                         } [filter:brightness(1.03)_contrast(1.06)_saturate(1.08)]`}
                       />
                     ) : (
@@ -141,7 +132,7 @@ export default function OrderMenu({
                       </span>
                     )}
                     <span
-                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/25 to-transparent"
+                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/15 to-transparent"
                       aria-hidden
                     />
                     <span
@@ -174,7 +165,6 @@ export default function OrderMenu({
         </div>
       </div>
 
-      {/* Active section panel — full width; ticket floats separately */}
       <div
         key={active.id}
         id={`order-panel-${active.id}`}
@@ -195,7 +185,7 @@ export default function OrderMenu({
             )}
           </div>
           <p className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/40 sm:text-[11px]">
-            {active.items.length} on the board
+            {active.items.length} on the board · tap for details
           </p>
         </div>
 
@@ -204,7 +194,7 @@ export default function OrderMenu({
             Nothing in this section right now
           </p>
         ) : (
-          <ul className="mt-4 grid grid-cols-1 gap-3 sm:mt-5 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+          <ul className="mt-4 grid grid-cols-2 gap-2.5 sm:mt-5 sm:gap-4 lg:grid-cols-3">
             {active.items.map((item) => {
               const qty = qtyForItem(cart, item.id);
               const customizable = itemNeedsCustomize(item);
@@ -213,180 +203,127 @@ export default function OrderMenu({
                 : undefined;
               const inTicket = qty > 0;
               const photoSrc = item.image && !brokenImages.has(item.image) ? item.image : null;
-              const photoLed = Boolean(photoSrc);
 
-              const actions = (
-                <div
-                  className={`mt-auto flex flex-wrap items-center gap-2 pt-3 ${
-                    photoLed ? "justify-between" : "justify-end"
-                  }`}
-                >
-                  {customizable ? (
-                    <>
-                      {inTicket && (
-                        <span className="rounded-full bg-ink/10 px-2.5 py-1 font-mono text-[11px] font-medium text-ink/70">
-                          {qty} in ticket
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => handleAddClick(item)}
-                        className={`flex items-center gap-1.5 rounded-md bg-ink px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-cream transition-colors hover:bg-chili ${
-                          photoLed ? "ml-auto" : ""
-                        }`}
-                        aria-label={`Customize and add ${item.name}`}
-                      >
-                        <Plus className="h-3.5 w-3.5" aria-hidden />
-                        {inTicket ? "Add another" : "Customize"}
-                      </button>
-                    </>
-                  ) : qty === 0 || !simpleLine ? (
-                    <button
-                      type="button"
-                      onClick={() => handleAddClick(item)}
-                      className={`flex items-center gap-1.5 rounded-md bg-ink px-3.5 py-2 font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-cream transition-colors hover:bg-chili ${
-                        photoLed ? "w-full justify-center sm:ml-auto sm:w-auto" : ""
-                      }`}
-                      aria-label={`Add ${item.name} to order`}
-                    >
-                      <Plus className="h-3.5 w-3.5" aria-hidden />
-                      Add
-                    </button>
-                  ) : (
-                    <div
-                      className={`flex items-center rounded-md border-2 border-ink bg-cream ${
-                        photoLed ? "ml-auto" : ""
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => onSetQty(simpleLine.key, simpleLine.qty - 1)}
-                        className="grid h-9 w-9 place-items-center text-ink transition-colors hover:bg-mustard"
-                        aria-label={`Remove one ${item.name}`}
-                      >
-                        <Minus className="h-4 w-4" aria-hidden />
-                      </button>
-                      <span className="w-8 text-center font-mono text-sm font-semibold">
-                        {simpleLine.qty}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => onSetQty(simpleLine.key, simpleLine.qty + 1)}
-                        className="grid h-9 w-9 place-items-center text-ink transition-colors hover:bg-mustard"
-                        aria-label={`Add one more ${item.name}`}
-                      >
-                        <Plus className="h-4 w-4" aria-hidden />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-
-              if (photoLed) {
-                return (
-                  <li
-                    key={item.id}
-                    className={`group flex min-w-0 flex-col overflow-hidden rounded-md border-2 bg-paper shadow-ticket transition-[border-color,box-shadow] ${
+              return (
+                <li key={item.id} className="min-w-0">
+                  <article
+                    className={`group relative flex h-full min-w-0 cursor-pointer flex-col overflow-hidden rounded-md border-2 bg-paper shadow-ticket transition-[border-color,box-shadow,transform] active:scale-[0.98] ${
                       inTicket
                         ? "border-chili/50 shadow-[3px_3px_0_0_rgba(196,74,46,0.25)]"
                         : "border-ink/15 hover:border-ink/40"
                     }`}
                   >
-                    <div className="relative aspect-[5/4] overflow-hidden bg-ink/5 sm:aspect-[4/3]">
-                      <img
-                        src={photoSrc!}
-                        alt=""
-                        loading="lazy"
-                        onError={() => markImageBroken(photoSrc!)}
-                        className="h-full w-full object-cover [filter:brightness(1.03)_contrast(1.08)_saturate(1.1)] transition-transform duration-500 ease-out group-hover:scale-[1.04]"
-                      />
-                      <div
-                        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/55 via-ink/10 to-transparent"
-                        aria-hidden
-                      />
-                      {item.tag && (
-                        <span
-                          className={`absolute left-3 top-3 rounded-sm px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] shadow-sm ${TAG_STYLES[item.tag] ?? "bg-ink text-cream"}`}
-                        >
-                          {item.tag}
-                        </span>
-                      )}
-                      <span className="absolute bottom-3 right-3 rounded-md border-2 border-ink/80 bg-cream/95 px-2.5 py-1 font-mono text-sm font-semibold text-chili backdrop-blur-sm">
-                        {priceLabel(item)}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-1 flex-col px-3.5 py-3.5 sm:px-4 sm:py-4">
-                      <h3 className="font-display text-[1.35rem] uppercase leading-tight tracking-[0.04em] sm:text-[1.5rem]">
-                        {item.name}
-                      </h3>
-                      {item.description && (
-                        <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-ink/55">
-                          {item.description}
-                        </p>
-                      )}
-                      {customizable && (
-                        <p className="mt-2 flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/40">
-                          <SlidersHorizontal className="h-3 w-3" aria-hidden />
-                          Options available
-                        </p>
-                      )}
-                      {actions}
-                    </div>
-                  </li>
-                );
-              }
-
-              return (
-                <li
-                  key={item.id}
-                  className={`flex gap-3 rounded-md border-2 p-3 transition-colors sm:gap-4 sm:p-4 ${
-                    inTicket
-                      ? "border-chili/40 bg-chili/[0.04]"
-                      : "border-ink/10 bg-cream/50 hover:border-ink/25"
-                  }`}
-                >
-                  {sectionHasImages && (
-                    <span
-                      className="grid aspect-square h-[4.5rem] w-[4.5rem] shrink-0 place-items-center rounded-md border-2 border-dashed border-ink/15 text-ink/25 sm:h-24 sm:w-24"
-                      aria-hidden
+                    <button
+                      type="button"
+                      onClick={() => openDetails(item)}
+                      className="flex min-w-0 flex-1 flex-col text-left"
+                      aria-label={`View details for ${item.name}`}
                     >
-                      <UtensilsCrossed className="h-6 w-6" />
-                    </span>
-                  )}
-
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="font-display text-[1.2rem] uppercase leading-tight tracking-[0.04em] sm:text-[1.35rem]">
-                          {item.name}
-                        </h3>
+                      <div className="relative aspect-[5/4] w-full overflow-hidden bg-ink/5 sm:aspect-[4/3]">
+                        {photoSrc ? (
+                          <img
+                            src={photoSrc}
+                            alt=""
+                            loading="lazy"
+                            onError={() => markImageBroken(photoSrc)}
+                            className="h-full w-full object-cover object-[center_40%] [filter:brightness(1.03)_contrast(1.08)_saturate(1.1)] transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+                          />
+                        ) : (
+                          <span className="grid h-full w-full place-items-center text-ink/20" aria-hidden>
+                            <UtensilsCrossed className="h-8 w-8" />
+                          </span>
+                        )}
+                        <div
+                          className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/55 via-ink/10 to-transparent"
+                          aria-hidden
+                        />
                         {item.tag && (
                           <span
-                            className={`mt-1.5 inline-block rounded-sm px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.14em] ${TAG_STYLES[item.tag] ?? "bg-ink text-cream"}`}
+                            className={`absolute left-1.5 top-1.5 rounded-sm px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[0.12em] shadow-sm sm:left-2.5 sm:top-2.5 sm:text-[10px] ${TAG_STYLES[item.tag] ?? "bg-ink text-cream"}`}
                           >
                             {item.tag}
                           </span>
                         )}
+                        {inTicket && (
+                          <span className="absolute right-1.5 top-1.5 rounded-full bg-chili px-1.5 py-0.5 font-mono text-[9px] font-semibold text-cream shadow-sm sm:right-2.5 sm:top-2.5 sm:text-[10px]">
+                            {qty}
+                          </span>
+                        )}
+                        <span className="absolute bottom-1.5 right-1.5 rounded-md border-2 border-ink/80 bg-cream/95 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-chili backdrop-blur-sm sm:bottom-2.5 sm:right-2.5 sm:px-2 sm:py-1 sm:text-sm">
+                          {priceLabel(item)}
+                        </span>
                       </div>
-                      <span className="shrink-0 font-mono text-sm font-semibold text-chili sm:text-base">
-                        {priceLabel(item)}
-                      </span>
-                    </div>
 
-                    {item.description && (
-                      <p className="mt-1.5 line-clamp-2 text-sm leading-snug text-ink/55">
-                        {item.description}
-                      </p>
-                    )}
-                    {customizable && (
-                      <p className="mt-1.5 flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/40">
-                        <SlidersHorizontal className="h-3 w-3" aria-hidden />
-                        Options available
-                      </p>
-                    )}
-                    {actions}
-                  </div>
+                      <div className="flex flex-1 flex-col px-2 py-2 sm:px-3.5 sm:py-3">
+                        <h3 className="font-display text-[0.95rem] uppercase leading-tight tracking-[0.03em] sm:text-[1.25rem]">
+                          {item.name}
+                        </h3>
+                        {item.description && (
+                          <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-ink/50 sm:text-[13px]">
+                            {item.description}
+                          </p>
+                        )}
+                        <p className="mt-1.5 flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-ink/40 sm:mt-2 sm:text-[10px]">
+                          {customizable ? (
+                            <>
+                              <SlidersHorizontal className="h-3 w-3" aria-hidden />
+                              Tap to customize
+                            </>
+                          ) : (
+                            "Tap for details"
+                          )}
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Quick actions — don't open details */}
+                    <div
+                      className="mt-auto flex items-center justify-end gap-1.5 border-t border-ink/8 px-2 py-2 sm:px-3 sm:py-2.5"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {customizable ? (
+                        <button
+                          type="button"
+                          onClick={() => openDetails(item)}
+                          className="flex w-full items-center justify-center gap-1 rounded-md bg-ink px-2 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-cream transition-colors hover:bg-chili sm:text-[11px]"
+                          aria-label={`Customize ${item.name}`}
+                        >
+                          <Plus className="h-3.5 w-3.5" aria-hidden />
+                          {inTicket ? "Add" : "Options"}
+                        </button>
+                      ) : qty === 0 || !simpleLine ? (
+                        <button
+                          type="button"
+                          onClick={() => onAddSimple(item)}
+                          className="flex w-full items-center justify-center gap-1 rounded-md bg-ink px-2 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-cream transition-colors hover:bg-chili sm:text-[11px]"
+                          aria-label={`Add ${item.name} to order`}
+                        >
+                          <Plus className="h-3.5 w-3.5" aria-hidden />
+                          Add
+                        </button>
+                      ) : (
+                        <div className="flex w-full items-center justify-between rounded-md border-2 border-ink bg-cream">
+                          <button
+                            type="button"
+                            onClick={() => onSetQty(simpleLine.key, simpleLine.qty - 1)}
+                            className="grid h-8 w-8 place-items-center text-ink transition-colors hover:bg-mustard sm:h-9 sm:w-9"
+                            aria-label={`Remove one ${item.name}`}
+                          >
+                            <Minus className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                          <span className="font-mono text-sm font-semibold tabular-nums">{simpleLine.qty}</span>
+                          <button
+                            type="button"
+                            onClick={() => onSetQty(simpleLine.key, simpleLine.qty + 1)}
+                            className="grid h-8 w-8 place-items-center text-ink transition-colors hover:bg-mustard sm:h-9 sm:w-9"
+                            aria-label={`Add one more ${item.name}`}
+                          >
+                            <Plus className="h-3.5 w-3.5" aria-hidden />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </article>
                 </li>
               );
             })}

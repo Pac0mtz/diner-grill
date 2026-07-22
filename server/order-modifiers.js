@@ -420,16 +420,8 @@ export function modifiersForItem(sectionLabel, itemName) {
   }
   if (isDrinks) {
     if (name.includes("coffee to go")) out.push(cloneGroup(GROUPS.size_coffee_go));
-    if (
-      name === "coke" ||
-      name === "diet coke" ||
-      name === "sprite" ||
-      name === "root beer" ||
-      name === "ginger ale" ||
-      name === "soft drinks"
-    ) {
-      // Legacy "Soft Drinks" kept for old tickets; flavors are separate menu items now.
-      if (name === "soft drinks") out.push(cloneGroup(GROUPS.soft_flavor));
+    if (name === "soft drinks") {
+      out.push(cloneGroup(GROUPS.soft_flavor));
       out.push(cloneGroup(GROUPS.size_soft));
     }
     if (name === "juice") {

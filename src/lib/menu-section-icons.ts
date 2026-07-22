@@ -40,19 +40,19 @@ export const SECTION_ICONS: Record<string, MenuSectionIcon> = {
 
 /** Featured card image for each order-page section tab. */
 export const SECTION_FEATURED: Record<string, string> = {
-  breakfast: "/photos/skillet-meat-lovers.jpg",
-  "breakfast-sandwiches": "/photos/breakfast-bacon-egg.jpg",
-  skillets: "/photos/skillet-california.jpg",
-  omelettes: "/photos/omelette-denver.jpg",
-  "chefs-creations": "/photos/slinger.jpg",
-  "pancakes-waffles": "/photos/waffle-banana-nutella.jpg",
-  "french-toast": "/photos/french-toast.jpg",
-  sandwiches: "/photos/cheeseburger.jpg",
-  burritos: "/photos/burrito-breakfast.jpg",
-  sides: "/photos/onion-rings.jpg",
-  kids: "/photos/mickey-pancake.jpg",
-  desserts: "/photos/churros.jpg",
-  drinks: "/photos/soda-coke.jpg",
+  breakfast: "/photos/breakfast-bacon-eggs.webp",
+  "breakfast-sandwiches": "/photos/breakfast-bacon-egg.webp",
+  skillets: "/photos/skillet-california.webp",
+  omelettes: "/photos/omelette-denver.webp",
+  "chefs-creations": "/photos/biscuits-gravy.webp",
+  "pancakes-waffles": "/photos/waffle-banana-nutella.webp",
+  "french-toast": "/photos/french-toast.webp",
+  sandwiches: "/photos/cheeseburger.webp",
+  burritos: "/photos/burrito-breakfast.webp",
+  sides: "/photos/fries.webp",
+  kids: "/photos/mickey-pancake.webp",
+  desserts: "/photos/churros.webp",
+  drinks: "/photos/soda-coke.webp",
 };
 
 function sectionIdFromLabel(label: string): string | null {

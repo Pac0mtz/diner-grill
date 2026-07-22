@@ -57,8 +57,8 @@ export default function MenuSection() {
                       src={featured}
                       alt=""
                       loading="lazy"
-                      className={`absolute inset-0 h-full w-full object-cover object-center transition-transform duration-500 ${
-                        selected ? "scale-[1.12]" : "scale-[1.08] group-hover:scale-[1.14]"
+                      className={`absolute inset-0 h-full w-full object-cover object-[center_42%] transition-transform duration-500 sm:object-center ${
+                        selected ? "scale-105 sm:scale-[1.08]" : "scale-100 group-hover:scale-105"
                       }`}
                     />
                   ) : (
@@ -67,7 +67,7 @@ export default function MenuSection() {
                     </span>
                   )}
                   <span
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/25 to-transparent"
+                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/15 to-transparent"
                     aria-hidden
                   />
                   {Icon && (
@@ -116,10 +116,10 @@ export default function MenuSection() {
                       onError={(e) => {
                         e.currentTarget.style.visibility = "hidden";
                       }}
-                      className="h-16 w-16 shrink-0 rounded-md border-2 border-ink/15 object-cover"
+                      className="h-[4.5rem] w-[4.5rem] shrink-0 rounded-md border-2 border-ink/15 object-cover object-[center_40%] sm:h-20 sm:w-20"
                     />
                   ) : (
-                    <span className="h-16 w-16 shrink-0" aria-hidden />
+                    <span className="h-[4.5rem] w-[4.5rem] shrink-0 sm:h-20 sm:w-20" aria-hidden />
                   ))}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-baseline gap-3">

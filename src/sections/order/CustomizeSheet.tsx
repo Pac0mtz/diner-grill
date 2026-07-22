@@ -56,6 +56,7 @@ export default function CustomizeSheet({
   const unitPrice = useMemo(() => computeUnitPrice(item, selections), [item, selections]);
   const complete = selectionsComplete(item, selections);
   const modExtra = unitPrice - item.price_cents;
+  const hasOptions = groups.length > 0;
 
   function selectSingle(groupId: string, optionId: string) {
     setSelections((prev) => {
@@ -99,10 +100,21 @@ export default function CustomizeSheet({
         className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border-2 border-ink bg-paper shadow-ticket sm:rounded-lg"
         onClick={(e) => e.stopPropagation()}
       >
+        {item.image && (
+          <div className="relative aspect-[16/10] w-full shrink-0 overflow-hidden bg-ink/5 sm:aspect-[5/3]">
+            <img
+              src={item.image}
+              alt=""
+              className="h-full w-full object-cover object-[center_40%] [filter:brightness(1.03)_contrast(1.06)_saturate(1.08)]"
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-transparent" aria-hidden />
+          </div>
+        )}
+
         <div className="flex items-start justify-between gap-3 border-b-2 border-ink/15 px-5 py-4">
           <div className="min-w-0">
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-chili">
-              {mode === "edit" ? "Edit item" : "Customize"}
+              {mode === "edit" ? "Edit item" : hasOptions ? "Customize" : "Details"}
             </p>
             <h2 id="customize-title" className="mt-1 font-display text-3xl uppercase tracking-[0.06em]">
               {item.name}

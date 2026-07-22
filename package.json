@@ -11,6 +11,7 @@
     "server": "node server/index.js",
     "seed": "node server/seed.js",
     "sync-menu": "node server/sync-menu.js",
+    "compress-photos": "node scripts/compress-photos.mjs",
     "print-agent": "node scripts/print-agent.mjs",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\""
   },
