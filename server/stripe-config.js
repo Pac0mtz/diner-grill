@@ -92,35 +92,56 @@ export async function getStripeWebhookSecret() {
  * The signing secret is only returned by Stripe at creation time, so if an
  * endpoint for our URL exists but we don't have its secret, we recreate it.
  */
+const AUTO_WEBHOOK_TAG = "diner-grill-auto-webhook";
+const WEBHOOK_LOCK_KEY = 728341; // arbitrary app-wide advisory lock id
+
 export async function ensureWebhookEndpoint() {
   const cfg = await getStripeConfig();
   if (!cfg.secret_key) return { ok: false, message: "Stripe not configured" };
   if (cfg.webhook_secret) return { ok: true, message: "webhook already configured" };
 
-  const domain =
+  const domain = (
     process.env.REPLIT_DEPLOYMENT
       ? (process.env.REPLIT_DOMAINS || "").split(",")[0]
-      : process.env.REPLIT_DEV_DOMAIN || (process.env.REPLIT_DOMAINS || "").split(",")[0];
+      : process.env.REPLIT_DEV_DOMAIN || (process.env.REPLIT_DOMAINS || "").split(",")[0] || ""
+  ).trim();
   if (!domain) return { ok: false, message: "no public domain available" };
   const url = `https://${domain}/api/stripe/webhook`;
 
-  const client = await getStripe();
+  const { pool, getSetting, setSetting } = await import("./db.js");
+  const dbc = await pool.connect();
   try {
-    // Remove any stale endpoint for this exact URL (its secret is unrecoverable).
-    const existing = await client.webhookEndpoints.list({ limit: 100 });
-    for (const ep of existing.data) {
-      if (ep.url === url) await client.webhookEndpoints.del(ep.id);
+    // Advisory lock: with autoscale, several instances can boot at once —
+    // only one may provision the endpoint; the rest wait then re-check.
+    await dbc.query("SELECT pg_advisory_lock($1)", [WEBHOOK_LOCK_KEY]);
+    if (await getSetting("stripe_webhook_secret")) {
+      return { ok: true, message: "webhook already configured" };
+    }
+
+    const client = await getStripe();
+    // Only remove endpoints THIS app created (tag in metadata) for this exact
+    // URL — their signing secret is unrecoverable. Never touch manual ones.
+    for await (const ep of client.webhookEndpoints.list({ limit: 100 })) {
+      if (ep.url === url && ep.metadata?.managed_by === AUTO_WEBHOOK_TAG) {
+        await client.webhookEndpoints.del(ep.id);
+      }
     }
     const ep = await client.webhookEndpoints.create({
       url,
       enabled_events: ["payment_intent.succeeded"],
       description: "Diner Grill online ordering (auto-configured)",
+      metadata: { managed_by: AUTO_WEBHOOK_TAG },
     });
-    const { setSetting } = await import("./db.js");
     await setSetting("stripe_webhook_secret", ep.secret);
     return { ok: true, message: `webhook endpoint created for ${url}` };
   } catch (err) {
     return { ok: false, message: `webhook setup failed: ${err.message || err}` };
+  } finally {
+    try {
+      await dbc.query("SELECT pg_advisory_unlock($1)", [WEBHOOK_LOCK_KEY]);
+    } finally {
+      dbc.release();
+    }
   }
 }
 
