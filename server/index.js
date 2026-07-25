@@ -43,6 +43,7 @@ import {
   getStripeWebhookSecret,
   getPublicStripeSettings,
   verifyStripe,
+  ensureWebhookEndpoint,
 } from "./stripe-config.js";
 import { injectSeoIntoHtml, buildSitemapXml } from "./seo-html.js";
 import { getPageSeo } from "../shared/seo.mjs";
@@ -147,6 +148,15 @@ try {
   if (n > 0) console.log(`[server] Backfilled ${n} item photo(s) from seed menu`);
 } catch (err) {
   console.error("[server] image backfill failed:", err.message);
+}
+
+// Auto-configure the Stripe webhook endpoint when keys are set but no
+// webhook signing secret exists yet (card orders are marked paid via webhook).
+try {
+  const w = await ensureWebhookEndpoint();
+  console.log(`[server] stripe webhook: ${w.message}`);
+} catch (err) {
+  console.error("[server] stripe webhook setup failed:", err.message);
 }
 
 const app = express();

@@ -85,6 +85,45 @@ export async function getStripeWebhookSecret() {
   return cfg.webhook_secret;
 }
 
+/**
+ * Ensure a Stripe webhook endpoint exists for this app and its signing secret
+ * is stored in settings. Runs at startup; no-op when a webhook secret is
+ * already configured or Stripe keys are missing.
+ * The signing secret is only returned by Stripe at creation time, so if an
+ * endpoint for our URL exists but we don't have its secret, we recreate it.
+ */
+export async function ensureWebhookEndpoint() {
+  const cfg = await getStripeConfig();
+  if (!cfg.secret_key) return { ok: false, message: "Stripe not configured" };
+  if (cfg.webhook_secret) return { ok: true, message: "webhook already configured" };
+
+  const domain =
+    process.env.REPLIT_DEPLOYMENT
+      ? (process.env.REPLIT_DOMAINS || "").split(",")[0]
+      : process.env.REPLIT_DEV_DOMAIN || (process.env.REPLIT_DOMAINS || "").split(",")[0];
+  if (!domain) return { ok: false, message: "no public domain available" };
+  const url = `https://${domain}/api/stripe/webhook`;
+
+  const client = await getStripe();
+  try {
+    // Remove any stale endpoint for this exact URL (its secret is unrecoverable).
+    const existing = await client.webhookEndpoints.list({ limit: 100 });
+    for (const ep of existing.data) {
+      if (ep.url === url) await client.webhookEndpoints.del(ep.id);
+    }
+    const ep = await client.webhookEndpoints.create({
+      url,
+      enabled_events: ["payment_intent.succeeded"],
+      description: "Diner Grill online ordering (auto-configured)",
+    });
+    const { setSetting } = await import("./db.js");
+    await setSetting("stripe_webhook_secret", ep.secret);
+    return { ok: true, message: `webhook endpoint created for ${url}` };
+  } catch (err) {
+    return { ok: false, message: `webhook setup failed: ${err.message || err}` };
+  }
+}
+
 /** Verify secret key with Stripe (list balance or retrieve account). */
 export async function verifyStripe() {
   const cfg = await getStripeConfig();
