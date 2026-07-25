@@ -59,13 +59,32 @@
           "name": "Diner Grill",
           "alternateName": "The Diner Grill",
           "description": "Legendary 24-hour counter diner in Lakeview, Chicago. Home of the Slinger. Serving scratch-made American diner classics since 1937.",
-          "image": ["https://dinergrill.com/og-image.png"],
+          "image": [
+            "https://dinergrill.com/og-image.png",
+            "https://dinergrill.com/photos/brand/hero-diner.webp",
+            "https://dinergrill.com/photos/brand/logo-badge.webp"
+          ],
           "servesCuisine": ["American", "Diner", "Breakfast", "Burgers"],
           "priceRange": "$",
           "telephone": "+1-773-248-2030",
           "url": "https://dinergrill.com/",
+          "menu": "https://dinergrill.com/menu",
+          "hasMenu": "https://dinergrill.com/menu",
           "foundingDate": "1937",
           "acceptsReservations": false,
+          "potentialAction": {
+            "@type": "OrderAction",
+            "target": {
+              "@type": "EntryPoint",
+              "urlTemplate": "https://dinergrill.com/order",
+              "inLanguage": "en",
+              "actionPlatform": [
+                "http://schema.org/DesktopWebPlatform",
+                "http://schema.org/MobileWebPlatform"
+              ]
+            },
+            "deliveryMethod": ["http://purl.org/goodrelations/v1#DeliveryModePickUp"]
+          },
           "address": {
             "@type": "PostalAddress",
             "streetAddress": "1635 W Irving Park Rd",

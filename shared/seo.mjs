@@ -30,13 +30,32 @@ export function restaurantJsonLd(extra = {}) {
     alternateName: "The Diner Grill",
     description:
       "Legendary 24-hour counter diner in Lakeview, Chicago. Home of the Slinger. Serving scratch-made American diner classics since 1937.",
-    image: [SITE.ogImage],
+    image: [
+      SITE.ogImage,
+      `${SITE.url}/photos/brand/hero-diner.webp`,
+      `${SITE.url}/photos/brand/logo-badge.webp`,
+    ],
     servesCuisine: ["American", "Diner", "Breakfast", "Burgers"],
     priceRange: "$",
     telephone: SITE.phone,
     url: `${SITE.url}/`,
+    menu: absoluteUrl("/menu"),
+    hasMenu: absoluteUrl("/menu"),
     foundingDate: SITE.foundingDate,
     acceptsReservations: false,
+    potentialAction: {
+      "@type": "OrderAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: absoluteUrl("/order"),
+        inLanguage: SITE.lang,
+        actionPlatform: [
+          "http://schema.org/DesktopWebPlatform",
+          "http://schema.org/MobileWebPlatform",
+        ],
+      },
+      deliveryMethod: ["http://purl.org/goodrelations/v1#DeliveryModePickUp"],
+    },
     address: {
       "@type": "PostalAddress",
       streetAddress: SITE.address.street,
@@ -119,9 +138,29 @@ export function breadcrumbJsonLd(pathname) {
 }
 
 export function buildJsonLdGraph(pathname) {
+  const page = getPageSeo(pathname);
   const graph = [restaurantJsonLd(), websiteJsonLd()];
-  if (pathname && pathname !== "/") {
-    graph.push(breadcrumbJsonLd(pathname));
+
+  if (page) {
+    graph.push({
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": `${absoluteUrl(page.path)}#webpage`,
+      url: absoluteUrl(page.path),
+      name: page.title,
+      description: page.description,
+      isPartOf: { "@id": `${SITE.url}/#website` },
+      about: { "@id": `${SITE.url}/#restaurant` },
+      inLanguage: SITE.lang,
+      primaryImageOfPage: {
+        "@type": "ImageObject",
+        url: page.ogImage || SITE.ogImage,
+      },
+    });
+  }
+
+  if (page && page.path !== "/") {
+    graph.push(breadcrumbJsonLd(page.path));
   }
   if (pathname === "/menu") {
     graph.push({

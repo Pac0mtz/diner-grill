@@ -46,6 +46,7 @@ export default function OrderPage() {
 
   const [sections, setSections] = useState<ApiMenuSection[]>([]);
   const [menuState, setMenuState] = useState<"loading" | "ready" | "error">("loading");
+  const [orderingEnabled, setOrderingEnabled] = useState(true);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [customer, setCustomer] = useState<CustomerInfo>({
     name: "",
@@ -78,11 +79,15 @@ export default function OrderPage() {
     fetch("/api/menu")
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json() as Promise<{ sections: ApiMenuSection[] }>;
+        return res.json() as Promise<{
+          sections: ApiMenuSection[];
+          online_ordering_enabled?: boolean;
+        }>;
       })
       .then((data) => {
         if (cancelled) return;
         setSections(data.sections);
+        setOrderingEnabled(data.online_ordering_enabled !== false);
         setMenuState("ready");
       })
       .catch(() => {
@@ -309,22 +314,62 @@ export default function OrderPage() {
         <div className="mx-auto max-w-7xl px-5 py-8 md:px-8 md:py-10">
           <div className="flex flex-wrap items-end justify-between gap-5">
             <div className="min-w-0">
-              <p className="flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[12px] uppercase tracking-[0.3em] text-chili">
-                <span className="h-px w-10 bg-chili/60" aria-hidden />
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full bg-chili" aria-hidden />
-                  Accepting orders
+              <p
+                className={`flex max-w-full flex-nowrap items-center gap-2 overflow-hidden font-mono text-[10px] uppercase tracking-[0.12em] sm:gap-3 sm:text-[12px] sm:tracking-[0.22em] ${
+                  orderingEnabled ? "text-chili" : "text-ink/55"
+                }`}
+              >
+                <span
+                  className={`hidden h-px w-10 shrink-0 sm:block ${
+                    orderingEnabled ? "bg-chili/60" : "bg-ink/30"
+                  }`}
+                  aria-hidden
+                />
+                <span
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2 py-0.5 sm:border-0 sm:px-0 sm:py-0 ${
+                    orderingEnabled
+                      ? "border-chili/35 bg-chili/10"
+                      : "border-ink/20 bg-ink/5"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2 ${
+                      orderingEnabled ? "bg-chili" : "bg-ink/35"
+                    }`}
+                    aria-hidden
+                  />
+                  <span className="truncate">
+                    {orderingEnabled ? "Accepting orders" : "Ordering paused"}
+                  </span>
                 </span>
-                <span className="text-ink/35">·</span>
-                <span className="text-ink/55">Pickup · ~45 min</span>
+                {orderingEnabled && (
+                  <span className="min-w-0 truncate text-ink/55">
+                    <span className="text-ink/30" aria-hidden>
+                      ·{" "}
+                    </span>
+                    Pickup · ~45 min
+                  </span>
+                )}
               </p>
               <h1 className="headline mt-2 text-5xl md:text-6xl lg:text-7xl">
                 Order <span className="text-chili">Online</span>
               </h1>
-              {step === "shop" && (
+              {step === "shop" && orderingEnabled && (
                 <p className="mt-3 max-w-lg text-base leading-relaxed text-ink/65">
                   Browse the menu, customize your plate, then checkout for counter pickup at{" "}
                   {SITE.address}.
+                </p>
+              )}
+              {step === "shop" && !orderingEnabled && (
+                <p className="mt-3 max-w-xl text-base leading-relaxed text-ink/65" role="status">
+                  You can still browse the full menu below. Online checkout is paused — call{" "}
+                  <a
+                    href={SITE.phoneHref}
+                    className="font-semibold text-chili underline underline-offset-2"
+                  >
+                    {SITE.phone}
+                  </a>{" "}
+                  to place an order.
                 </p>
               )}
               {step === "pay" && (
@@ -419,13 +464,36 @@ export default function OrderPage() {
               </div>
             )}
             {menuState === "ready" && (
-              <OrderMenu
-                sections={sections}
-                cart={cart}
-                onAddSimple={addSimple}
-                onCustomize={(item) => setSheet({ mode: "add", item })}
-                onSetQty={setQty}
-              />
+              <>
+                {!orderingEnabled && (
+                  <div
+                    role="status"
+                    className="mb-5 rounded-md border-2 border-ink/20 bg-mustard/30 px-4 py-3.5 text-sm leading-relaxed text-ink/80 sm:px-5"
+                  >
+                    <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-ink">
+                      Browsing only
+                    </p>
+                    <p className="mt-1">
+                      Online ordering is temporarily paused. Explore the menu, then call{" "}
+                      <a
+                        href={SITE.phoneHref}
+                        className="font-semibold text-chili underline underline-offset-2"
+                      >
+                        {SITE.phone}
+                      </a>{" "}
+                      — we&apos;ll take your order at the counter or over the phone.
+                    </p>
+                  </div>
+                )}
+                <OrderMenu
+                  sections={sections}
+                  cart={orderingEnabled ? cart : []}
+                  orderingEnabled={orderingEnabled}
+                  onAddSimple={addSimple}
+                  onCustomize={(item) => setSheet({ mode: "add", item })}
+                  onSetQty={setQty}
+                />
+              </>
             )}
           </>
         )}
@@ -440,11 +508,16 @@ export default function OrderPage() {
           }
           item={sheet.item}
           mode={sheet.mode}
+          orderingEnabled={orderingEnabled}
           initialModifiers={sheet.mode === "edit" ? sheet.line.modifiers : undefined}
           initialLineNote={sheet.mode === "edit" ? sheet.line.line_note : ""}
           initialQty={sheet.mode === "edit" ? sheet.line.qty : 1}
           onClose={() => setSheet(null)}
           onConfirm={({ modifiers, line_note, qty, unit_price_cents }) => {
+            if (!orderingEnabled) {
+              setSheet(null);
+              return;
+            }
             if (sheet.mode === "edit") {
               updateCustom(sheet.line.key, {
                 item: sheet.item,
@@ -468,7 +541,7 @@ export default function OrderPage() {
       )}
 
       {/* Floating collapsible ticket — full menu width; ticket overlays when needed */}
-      {step === "shop" && menuState === "ready" && (
+      {step === "shop" && menuState === "ready" && orderingEnabled && (
         <>
           {/* Collapsed launcher */}
           {!mobileCartOpen && (

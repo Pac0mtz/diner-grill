@@ -8,6 +8,7 @@ import {
   selectionsComplete,
 } from "../../lib/order-cart";
 import { formatCents } from "../../lib/money";
+import { SITE } from "../../data/site";
 import ProtectedImg from "../../components/ProtectedImg";
 
 type CustomizeSheetProps = {
@@ -17,6 +18,8 @@ type CustomizeSheetProps = {
   initialLineNote?: string;
   initialQty?: number;
   mode?: "add" | "edit";
+  /** When false, sheet is details-only (no add to ticket). */
+  orderingEnabled?: boolean;
   onClose: () => void;
   onConfirm: (payload: {
     modifiers: SelectedModifier[];
@@ -32,6 +35,7 @@ export default function CustomizeSheet({
   initialLineNote = "",
   initialQty = 1,
   mode = "add",
+  orderingEnabled = true,
   onClose,
   onConfirm,
 }: CustomizeSheetProps) {
@@ -115,7 +119,13 @@ export default function CustomizeSheet({
         <div className="flex items-start justify-between gap-3 border-b-2 border-ink/15 px-5 py-4">
           <div className="min-w-0">
             <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-chili">
-              {mode === "edit" ? "Edit item" : hasOptions ? "Customize" : "Details"}
+              {!orderingEnabled
+                ? "Details"
+                : mode === "edit"
+                  ? "Edit item"
+                  : hasOptions
+                    ? "Customize"
+                    : "Details"}
             </p>
             <h2 id="customize-title" className="mt-1 font-display text-3xl uppercase tracking-[0.06em]">
               {item.name}
@@ -237,40 +247,60 @@ export default function CustomizeSheet({
         </div>
 
         <div className="flex items-center gap-3 border-t-2 border-ink/15 bg-cream/50 px-5 py-4">
-          <div className="flex items-center rounded-md border-2 border-ink bg-cream">
-            <button
-              type="button"
-              onClick={() => setQty((q) => Math.max(1, q - 1))}
-              className="grid h-10 w-10 place-items-center hover:bg-mustard"
-              aria-label="Decrease quantity"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <span className="w-8 text-center font-mono text-sm font-medium">{qty}</span>
-            <button
-              type="button"
-              onClick={() => setQty((q) => Math.min(50, q + 1))}
-              className="grid h-10 w-10 place-items-center hover:bg-mustard"
-              aria-label="Increase quantity"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-          <button
-            type="button"
-            disabled={!complete}
-            onClick={() =>
-              onConfirm({
-                modifiers: selections,
-                line_note: lineNote.trim(),
-                qty,
-                unit_price_cents: unitPrice,
-              })
-            }
-            className="flex-1 rounded-md bg-chili px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream shadow-ticket transition-colors hover:bg-ember disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {mode === "edit" ? "Update" : "Add"} · {formatCents(unitPrice * qty)}
-          </button>
+          {orderingEnabled ? (
+            <>
+              <div className="flex items-center rounded-md border-2 border-ink bg-cream">
+                <button
+                  type="button"
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="grid h-10 w-10 place-items-center hover:bg-mustard"
+                  aria-label="Decrease quantity"
+                >
+                  <Minus className="h-4 w-4" />
+                </button>
+                <span className="w-8 text-center font-mono text-sm font-medium">{qty}</span>
+                <button
+                  type="button"
+                  onClick={() => setQty((q) => Math.min(50, q + 1))}
+                  className="grid h-10 w-10 place-items-center hover:bg-mustard"
+                  aria-label="Increase quantity"
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+              <button
+                type="button"
+                disabled={!complete}
+                onClick={() =>
+                  onConfirm({
+                    modifiers: selections,
+                    line_note: lineNote.trim(),
+                    qty,
+                    unit_price_cents: unitPrice,
+                  })
+                }
+                className="flex-1 rounded-md bg-chili px-4 py-3 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream shadow-ticket transition-colors hover:bg-ember disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {mode === "edit" ? "Update" : "Add"} · {formatCents(unitPrice * qty)}
+              </button>
+            </>
+          ) : (
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center">
+              <p className="flex-1 text-sm leading-snug text-ink/65" role="status">
+                Online ordering is paused. Call{" "}
+                <a href={SITE.phoneHref} className="font-semibold text-chili underline underline-offset-2">
+                  {SITE.phone}
+                </a>{" "}
+                to order · {formatCents(item.price_cents)}
+              </p>
+              <a
+                href={SITE.phoneHref}
+                className="inline-flex shrink-0 items-center justify-center rounded-md bg-chili px-4 py-3 text-center font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-cream shadow-ticket transition-colors hover:bg-ember"
+              >
+                Call to order
+              </a>
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -39,9 +39,14 @@ export function injectSeoIntoHtml(html, pathname) {
   const ogDescription = is404 ? description : page?.ogDescription || description;
   const robots = is404 ? "noindex, follow" : page?.robots || "index, follow";
   const canonical = is404 ? absoluteUrl("/") : absoluteUrl(page?.path || "/");
-  const image = SITE.ogImage;
+  const image = page?.ogImage || SITE.ogImage;
   const ogType = page?.ogType || "website";
   const keywords = page?.keywords || "";
+  const imageType = String(image).endsWith(".webp")
+    ? "image/webp"
+    : String(image).endsWith(".jpg") || String(image).endsWith(".jpeg")
+      ? "image/jpeg"
+      : "image/png";
 
   let out = html;
 
@@ -80,12 +85,16 @@ export function injectSeoIntoHtml(html, pathname) {
   replaceMetaProp("og:url", canonical);
   replaceMetaProp("og:image", image);
   replaceMetaProp("og:image:secure_url", image);
+  replaceMetaProp("og:image:type", imageType);
+  replaceMetaProp("og:image:width", String(SITE.ogImageWidth));
+  replaceMetaProp("og:image:height", String(SITE.ogImageHeight));
   replaceMetaProp("og:image:alt", ogTitle);
 
   replaceMetaName("twitter:title", ogTitle);
   replaceMetaName("twitter:description", ogDescription);
   replaceMetaName("twitter:image", image);
   replaceMetaName("twitter:image:alt", ogTitle);
+  if (SITE.twitter) replaceMetaName("twitter:site", SITE.twitter);
 
   const graphPath = is404 ? "/" : page?.path || "/";
   const graph = buildJsonLdGraph(graphPath);

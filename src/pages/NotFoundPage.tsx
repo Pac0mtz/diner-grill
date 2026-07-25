@@ -1,9 +1,11 @@
-import { Link } from "react-router";
+import { Link, useLocation } from "react-router";
 import { usePageMeta } from "../hooks/usePageMeta";
 
 export default function NotFoundPage() {
+  const { pathname } = useLocation();
   usePageMeta({
-    path: "/404",
+    path: pathname,
+    canonicalPath: "/",
     title: "Page Not Found | Diner Grill",
     description:
       "That page isn’t on the menu. Head back to Diner Grill’s home, menu, or visit page.",

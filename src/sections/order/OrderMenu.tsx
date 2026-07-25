@@ -18,6 +18,8 @@ export type { CartLine };
 type OrderMenuProps = {
   sections: ApiMenuSection[];
   cart: CartLine[];
+  /** When false, menu is browse-only (no add / qty controls). */
+  orderingEnabled?: boolean;
   onAddSimple: (item: ApiMenuItem) => void;
   onCustomize: (item: ApiMenuItem) => void;
   onSetQty: (key: string, qty: number) => void;
@@ -30,6 +32,7 @@ function qtyForItem(cart: CartLine[], itemId: number) {
 export default function OrderMenu({
   sections,
   cart,
+  orderingEnabled = true,
   onAddSimple,
   onCustomize,
   onSetQty,
@@ -83,83 +86,99 @@ export default function OrderMenu({
   return (
     <div className="min-w-0 max-w-full pb-28">
       <div className="sticky top-16 z-30 -mx-5 border-b-2 border-ink/10 bg-cream/95 backdrop-blur-md md:-mx-8">
-        <div className="px-4 py-3 sm:px-5 md:px-8">
-          <p className="mb-3 font-mono text-[12px] font-semibold uppercase tracking-[0.2em] text-ink/75 sm:text-[13px]">
-            Menu sections
-          </p>
-          <div
-            ref={tablistRef}
-            className="flex snap-x snap-mandatory gap-2.5 overflow-x-auto overscroll-x-contain pb-1 touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-            role="tablist"
-            aria-label="Menu sections"
-          >
-            {sections.map((s) => {
-              const selected = active.id === s.id;
-              const count = s.items.reduce((n, item) => n + qtyForItem(cart, item.id), 0);
-              const Icon = iconForSectionLabel(s.label);
-              const featured = featuredImageForSection(s.label, s.items);
-              return (
-                <button
-                  key={s.id}
-                  ref={(el) => {
-                    if (el) tabRefs.current.set(s.id, el);
-                    else tabRefs.current.delete(s.id);
-                  }}
-                  type="button"
-                  role="tab"
-                  aria-selected={selected}
-                  aria-controls={`order-panel-${s.id}`}
-                  id={`order-tab-${s.id}`}
-                  onClick={() => setActiveId(s.id)}
-                  className={`group relative w-[9.25rem] shrink-0 snap-start overflow-hidden rounded-lg border-2 text-left transition-all sm:w-[10.5rem] md:w-[11.25rem] ${
-                    selected
-                      ? "border-ink bg-ink shadow-ticket ring-2 ring-mustard/80"
-                      : "border-ink/15 bg-paper hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-ticket"
-                  }`}
-                >
-                  <span className="relative block h-[7.75rem] w-full overflow-hidden bg-ink/10 sm:h-[9rem] md:h-[10rem]">
-                    {featured ? (
-                      <ProtectedImg
-                        src={featured}
-                        alt=""
-                        loading="lazy"
-                        className="absolute inset-0 h-full w-full object-cover object-[center_42%] [filter:brightness(1.03)_contrast(1.06)_saturate(1.08)] sm:object-center"
-                      />
-                    ) : (
-                      <span className="absolute inset-0 grid place-items-center bg-cream">
-                        <Icon className="h-9 w-9 text-chili/70" aria-hidden strokeWidth={2} />
-                      </span>
-                    )}
-                    <span
-                      className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/15 to-transparent"
-                      aria-hidden
-                    />
-                    <span
-                      className={`absolute right-2 top-2 grid min-h-6 min-w-6 place-items-center rounded-full px-1.5 font-mono text-[11px] font-semibold tabular-nums shadow-sm ${
-                        selected ? "bg-mustard text-ink" : "bg-cream/95 text-ink"
-                      }`}
-                    >
-                      {s.items.length}
-                    </span>
-                    {count > 0 && (
-                      <span className="absolute left-2 top-2 rounded-full bg-chili px-1.5 py-0.5 font-mono text-[10px] font-semibold text-cream shadow-sm">
-                        {count}
-                      </span>
-                    )}
-                    <span className="absolute bottom-2 left-2 grid h-7 w-7 place-items-center rounded-full bg-cream/95 text-chili shadow-sm">
-                      <Icon className="h-3.5 w-3.5" aria-hidden strokeWidth={2.25} />
-                    </span>
-                  </span>
-                  <span
-                    className={`block min-h-[3rem] px-2.5 py-2.5 font-mono text-[11px] font-bold uppercase leading-snug tracking-[0.08em] sm:min-h-[3.25rem] sm:text-[12px] ${
-                      selected ? "text-cream" : "text-ink"
+        <div className="relative px-0 py-2.5 sm:px-5 sm:py-3 md:px-8">
+          <div className="mb-2 flex items-baseline justify-between gap-3 px-4 sm:mb-3 sm:px-0">
+            <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-ink/70 sm:text-[13px]">
+              Menu sections
+            </p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-ink/40 sm:hidden">
+              Swipe →
+            </p>
+          </div>
+          <div className="relative">
+            <div
+              ref={tablistRef}
+              className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain scroll-px-4 px-4 pb-1 touch-pan-x [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden sm:gap-2.5 sm:scroll-px-0 sm:px-0"
+              role="tablist"
+              aria-label="Menu sections"
+            >
+              {sections.map((s) => {
+                const selected = active.id === s.id;
+                const count = s.items.reduce((n, item) => n + qtyForItem(cart, item.id), 0);
+                const Icon = iconForSectionLabel(s.label);
+                const featured = featuredImageForSection(s.label, s.items);
+                return (
+                  <button
+                    key={s.id}
+                    ref={(el) => {
+                      if (el) tabRefs.current.set(s.id, el);
+                      else tabRefs.current.delete(s.id);
+                    }}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls={`order-panel-${s.id}`}
+                    id={`order-tab-${s.id}`}
+                    onClick={() => setActiveId(s.id)}
+                    className={`group relative flex w-[38vw] max-w-[9.5rem] shrink-0 snap-start flex-col overflow-hidden rounded-lg border-2 text-left leading-none transition-all sm:w-[10.5rem] sm:max-w-none md:w-[11.25rem] ${
+                      selected
+                        ? "border-ink bg-ink shadow-ticket ring-2 ring-mustard/80"
+                        : "border-ink/15 bg-paper hover:-translate-y-0.5 hover:border-ink/40 hover:shadow-ticket"
                     }`}
                   >
-                    {s.label}
-                  </span>
-                </button>
-              );
-            })}
+                    <span className="relative -mt-px block h-32 w-full shrink-0 overflow-hidden bg-ink/10 sm:mt-0 sm:h-[9rem] md:h-[10rem]">
+                      {featured ? (
+                        <ProtectedImg
+                          src={featured}
+                          alt=""
+                          loading="lazy"
+                          className="absolute inset-0 h-full w-full scale-[1.02] object-cover object-center [filter:brightness(1.03)_contrast(1.06)_saturate(1.08)]"
+                        />
+                      ) : (
+                        <span className="absolute inset-0 grid place-items-center bg-cream">
+                          <Icon className="h-8 w-8 text-chili/70 sm:h-9 sm:w-9" aria-hidden strokeWidth={2} />
+                        </span>
+                      )}
+                      <span
+                        className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/10 to-transparent"
+                        aria-hidden
+                      />
+                      <span
+                        className={`absolute right-1.5 top-1.5 grid min-h-5 min-w-5 place-items-center rounded-full px-1 font-mono text-[10px] font-semibold tabular-nums shadow-sm sm:right-2 sm:top-2 sm:min-h-6 sm:min-w-6 sm:px-1.5 sm:text-[11px] ${
+                          selected ? "bg-mustard text-ink" : "bg-cream/95 text-ink"
+                        }`}
+                      >
+                        {s.items.length}
+                      </span>
+                      {count > 0 && (
+                        <span className="absolute left-1.5 top-1.5 rounded-full bg-chili px-1.5 py-0.5 font-mono text-[9px] font-semibold text-cream shadow-sm sm:left-2 sm:top-2 sm:text-[10px]">
+                          {count}
+                        </span>
+                      )}
+                      <span className="absolute bottom-1.5 left-1.5 grid h-6 w-6 place-items-center rounded-full bg-cream/95 text-chili shadow-sm sm:bottom-2 sm:left-2 sm:h-7 sm:w-7">
+                        <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden strokeWidth={2.25} />
+                      </span>
+                    </span>
+                    <span
+                      className={`block min-h-[2.5rem] px-2 py-2 font-mono text-[10px] font-bold uppercase leading-snug tracking-[0.07em] sm:min-h-[3.25rem] sm:px-2.5 sm:py-2.5 sm:text-[12px] ${
+                        selected ? "text-cream" : "text-ink"
+                      }`}
+                    >
+                      {s.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Edge fades hint more tabs off-screen */}
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-cream/95 to-transparent sm:hidden"
+              aria-hidden
+            />
+            <div
+              className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-cream/95 to-transparent sm:hidden"
+              aria-hidden
+            />
           </div>
         </div>
       </div>
@@ -169,7 +188,7 @@ export default function OrderMenu({
         id={`order-panel-${active.id}`}
         role="tabpanel"
         aria-labelledby={`order-tab-${active.id}`}
-        className="menu-in mt-5 min-w-0 rounded-lg border-2 border-ink/12 bg-paper p-3 shadow-ticket sm:mt-6 sm:p-5 md:p-7"
+        className="menu-in mt-4 min-w-0 sm:mt-6 sm:rounded-lg sm:border-2 sm:border-ink/12 sm:bg-paper sm:p-5 sm:shadow-ticket md:p-7"
       >
         <div className="flex flex-col gap-2 border-b-2 border-ink/80 pb-3 sm:flex-row sm:items-end sm:justify-between sm:pb-4">
           <div className="min-w-0">
@@ -265,7 +284,9 @@ export default function OrderMenu({
                           </p>
                         )}
                         <p className="mt-1.5 flex items-center gap-1 font-mono text-[9px] uppercase tracking-[0.12em] text-ink/40 sm:mt-2 sm:text-[10px]">
-                          {customizable ? (
+                          {!orderingEnabled ? (
+                            "Tap for details"
+                          ) : customizable ? (
                             <>
                               <SlidersHorizontal className="h-3 w-3" aria-hidden />
                               Tap to customize
@@ -282,7 +303,16 @@ export default function OrderMenu({
                       className="mt-auto flex items-center justify-end gap-1.5 border-t border-ink/8 px-2 py-2 sm:px-3 sm:py-2.5"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {customizable ? (
+                      {!orderingEnabled ? (
+                        <button
+                          type="button"
+                          onClick={() => openDetails(item)}
+                          className="flex w-full items-center justify-center gap-1 rounded-md border-2 border-ink/20 bg-cream px-2 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.12em] text-ink/70 transition-colors hover:border-ink hover:text-ink sm:text-[11px]"
+                          aria-label={`View details for ${item.name}`}
+                        >
+                          View details
+                        </button>
+                      ) : customizable ? (
                         <button
                           type="button"
                           onClick={() => openDetails(item)}

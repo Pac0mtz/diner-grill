@@ -26,6 +26,7 @@
     "description": "Full Diner Grill menu: all-day breakfast, omelettes, skillets, pancakes, thin griddled burgers and the famous Slinger. Served 24 hours in Lakeview, Chicago.",
     "ogTitle": "Menu | Diner Grill — Breakfast, Burgers & the Slinger",
     "ogDescription": "All-day breakfast, skillets, thin burgers, and Chicago's famous Slinger. Full menu served 24 hours.",
+    "ogImage": "https://dinergrill.com/og-image.png",
     "keywords": "diner grill menu, slinger chicago, breakfast chicago, skillets, omelettes, burgers lakeview",
     "changefreq": "weekly",
     "priority": 0.95
@@ -66,6 +67,7 @@
     "description": "Order Diner Grill online for counter pickup: all-day breakfast, skillets, burgers and the famous Slinger. Open 24 hours on Irving Park Rd, Chicago.",
     "ogTitle": "Order Online | Diner Grill Chicago",
     "ogDescription": "Order breakfast, burgers, and the famous Slinger online for counter pickup. Open 24 hours.",
+    "ogImage": "https://dinergrill.com/og-image.png",
     "keywords": "order diner grill, online order chicago diner, pickup breakfast lakeview, order slinger",
     "changefreq": "weekly",
     "priority": 0.9

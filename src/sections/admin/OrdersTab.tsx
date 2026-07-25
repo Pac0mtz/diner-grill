@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Printer, RefreshCw, Volume2, VolumeX } from "lucide-react";
+import { PauseCircle, Printer, RefreshCw, Store, Volume2, VolumeX } from "lucide-react";
 import { printReceiptLocally } from "./receipt-print";
 import type { AdminOrder, OrderStatus } from "../../lib/api-types";
 import { formatCents } from "../../lib/money";
@@ -156,6 +156,8 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [freshIds, setFreshIds] = useState<Set<number>>(new Set());
   const [soundOn, setSoundOn] = useState(true);
+  const [orderingOn, setOrderingOn] = useState(true);
+  const [orderingBusy, setOrderingBusy] = useState(false);
   const seenIds = useRef<Set<number> | null>(null);
   const soundOnRef = useRef(true);
 
@@ -166,15 +168,36 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
   useEffect(() => {
     (async () => {
       try {
-        const s = await adminFetch<{ order_alert_sound?: string }>("/api/admin/settings");
+        const s = await adminFetch<{ order_alert_sound?: string; online_ordering_enabled?: string }>(
+          "/api/admin/settings"
+        );
         const on = s.order_alert_sound !== "0";
         setSoundOn(on);
         soundOnRef.current = on;
+        setOrderingOn(s.online_ordering_enabled !== "0");
       } catch {
-        /* keep default on */
+        /* keep defaults on */
       }
     })();
   }, []);
+
+  async function toggleOnlineOrdering() {
+    const next = !orderingOn;
+    setOrderingBusy(true);
+    setError(null);
+    try {
+      const data = await adminFetch<{ online_ordering_enabled?: string }>("/api/admin/settings", {
+        method: "PUT",
+        body: { online_ordering_enabled: next ? "1" : "0" },
+      });
+      setOrderingOn(data.online_ordering_enabled !== "0");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return onUnauthorized();
+      setError(err instanceof Error ? err.message : "Could not update online ordering.");
+    } finally {
+      setOrderingBusy(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -261,7 +284,36 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
           </p>
           <p className="mt-0.5 text-sm text-ink/55">New → preparing → ready → done</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void toggleOnlineOrdering()}
+            disabled={orderingBusy}
+            className={`flex items-center gap-1.5 rounded-md border-2 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors disabled:opacity-50 ${
+              orderingOn
+                ? "border-chili bg-chili text-cream hover:bg-ember"
+                : "border-ink/30 bg-ink/5 text-ink/55 hover:border-ink hover:text-ink"
+            }`}
+            aria-pressed={orderingOn}
+            aria-busy={orderingBusy}
+            aria-label={
+              orderingOn
+                ? "Online ordering is on. Press to pause online ordering."
+                : "Online ordering is paused. Press to resume online ordering."
+            }
+            title={
+              orderingOn
+                ? "Customers can place online orders. Click to pause — menu stays visible."
+                : "Online ordering paused. Menu stays visible with a message. Click to resume."
+            }
+          >
+            {orderingOn ? (
+              <Store className="h-3.5 w-3.5" aria-hidden />
+            ) : (
+              <PauseCircle className="h-3.5 w-3.5" aria-hidden />
+            )}
+            {orderingBusy ? "Saving…" : orderingOn ? "Ordering on" : "Ordering paused"}
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -291,6 +343,16 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
           </button>
         </div>
       </div>
+
+      {!orderingOn && (
+        <p
+          role="status"
+          className="mb-3 rounded-md border-2 border-ink/20 bg-mustard/25 px-3 py-2.5 text-sm text-ink/80"
+        >
+          Online ordering is paused. Guests can still browse the menu on the website and see a
+          message to call the diner.
+        </p>
+      )}
 
       {error && (
         <p

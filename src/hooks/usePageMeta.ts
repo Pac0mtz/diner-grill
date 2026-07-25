@@ -44,8 +44,10 @@ function upsertJsonLd(id: string, data: unknown) {
 }
 
 export type PageMetaOptions = {
-  /** Pathname for canonical / OG url (defaults to current location). */
+  /** Pathname for page SEO map / JSON-LD (defaults to current location). */
   path?: string;
+  /** Override canonical + og:url (e.g. 404 → "/"). */
+  canonicalPath?: string;
   title?: string;
   description?: string;
   ogTitle?: string;
@@ -88,10 +90,15 @@ export function usePageMeta(
     const ogTitle = opts.ogTitle || fromMap?.ogTitle || title;
     const ogDescription = opts.ogDescription || fromMap?.ogDescription || description;
     const robots = opts.robots || fromMap?.robots || "index, follow";
-    const image = opts.image || SITE.ogImage;
+    const image = opts.image || fromMap?.ogImage || SITE.ogImage;
     const ogType = opts.ogType || fromMap?.ogType || "website";
-    const canonical = absoluteUrl(path);
+    const canonical = absoluteUrl(opts.canonicalPath || path);
     const keywords = opts.keywords || fromMap?.keywords;
+    const imageType = image.endsWith(".webp")
+      ? "image/webp"
+      : image.endsWith(".jpg") || image.endsWith(".jpeg")
+        ? "image/jpeg"
+        : "image/png";
 
     document.title = title;
     document.documentElement.lang = SITE.lang;
@@ -104,6 +111,7 @@ export function usePageMeta(
     }
 
     upsertLink("canonical", canonical);
+    upsertLink("sitemap", "/sitemap.xml", { type: "application/xml", title: "Sitemap" });
 
     upsertMeta('meta[property="og:type"]', { property: "og:type" }, ogType);
     upsertMeta('meta[property="og:site_name"]', { property: "og:site_name" }, SITE.name);
@@ -117,6 +125,7 @@ export function usePageMeta(
       { property: "og:image:secure_url" },
       image
     );
+    upsertMeta('meta[property="og:image:type"]', { property: "og:image:type" }, imageType);
     upsertMeta(
       'meta[property="og:image:width"]',
       { property: "og:image:width" },
@@ -134,6 +143,12 @@ export function usePageMeta(
     upsertMeta('meta[name="twitter:description"]', { name: "twitter:description" }, ogDescription);
     upsertMeta('meta[name="twitter:image"]', { name: "twitter:image" }, image);
     upsertMeta('meta[name="twitter:image:alt"]', { name: "twitter:image:alt" }, ogTitle);
+    if (SITE.twitter) {
+      upsertMeta('meta[name="twitter:site"]', { name: "twitter:site" }, SITE.twitter);
+    }
+
+    // Legacy scrapers
+    upsertLink("image_src", image);
 
     const graph = buildJsonLdGraph(path);
     if (opts.jsonLd) {

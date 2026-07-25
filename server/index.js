@@ -526,6 +526,12 @@ app.get("/api/me/orders", customerAuth, h(async (req, res) => {
 
 // GET /api/menu — sections with available items. Sections whose items were
 // all deactivated by a menu sync (legacy categories) are hidden entirely.
+/** Online ordering master switch — missing/empty defaults to ON. */
+async function isOnlineOrderingEnabled() {
+  const raw = ((await getSetting("online_ordering_enabled")) || "1").toLowerCase();
+  return !(raw === "0" || raw === "false" || raw === "off");
+}
+
 app.get("/api/menu", h(async (req, res) => {
   const sections = (await query("SELECT id, label, note, sort FROM sections ORDER BY sort, id")).rows;
   const items = (
@@ -539,7 +545,8 @@ app.get("/api/menu", h(async (req, res) => {
       items: items.filter((i) => i.section_id === s.id).map(({ section_id, ...rest }) => rest),
     }))
     .filter((s) => s.items.length > 0);
-  res.json({ sections: attachModifiersToSections(shaped) });
+  const online_ordering_enabled = await isOnlineOrderingEnabled();
+  res.json({ sections: attachModifiersToSections(shaped), online_ordering_enabled });
 }));
 
 // GET /api/stripe/config — publishable key for the checkout page (safe to expose).
@@ -554,6 +561,14 @@ app.get("/api/stripe/config", h(async (req, res) => {
 
 // POST /api/orders — validate, price (incl. modifiers), create order + Stripe PaymentIntent.
 app.post("/api/orders", optionalCustomerAuth, h(async (req, res) => {
+  if (!(await isOnlineOrderingEnabled())) {
+    return bad(
+      res,
+      503,
+      "Online ordering is paused right now. You can still browse the menu — call (773) 248-2030 to place an order."
+    );
+  }
+
   const paymentMethod = req.body && req.body.payment_method === "cash" ? "cash" : "card";
   const stripe = await getStripe();
   if (paymentMethod === "card" && !stripe) {
@@ -1481,6 +1496,7 @@ async function publicSettings() {
   return {
     printer_ip: (await getSetting("printer_ip")) || "",
     printer_device_id: (await getSetting("printer_device_id")) || "",
+    online_ordering_enabled: (await isOnlineOrderingEnabled()) ? "1" : "0",
     ...(await getPublicMailSettings()),
     ...(await getPublicCustomerEmailSettings()),
     ...(await getPublicStripeSettings()),
@@ -1503,6 +1519,14 @@ app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
 
   for (const k of ["printer_ip", "printer_device_id"]) {
     if (k in body) await setSetting(k, body[k] ? String(body[k]).trim() : "");
+  }
+
+  if ("online_ordering_enabled" in body) {
+    const on =
+      body.online_ordering_enabled === "1" ||
+      body.online_ordering_enabled === true ||
+      body.online_ordering_enabled === 1;
+    await setSetting("online_ordering_enabled", on ? "1" : "0");
   }
 
   for (const k of MAIL_SETTING_KEYS) {
@@ -1598,6 +1622,9 @@ app.get("/robots.txt", (_req, res) => {
   res.type("text/plain").send(`User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /admin/
+Disallow: /account
+Disallow: /account/
 Disallow: /api/
 
 Sitemap: https://dinergrill.com/sitemap.xml

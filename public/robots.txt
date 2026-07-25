@@ -1,6 +1,10 @@
 User-agent: *
 Allow: /
 Disallow: /admin
+Disallow: /admin/
+Disallow: /account
+Disallow: /account/
 Disallow: /api/
 
+# Prefer the dynamic sitemap from the app server
 Sitemap: https://dinergrill.com/sitemap.xml
