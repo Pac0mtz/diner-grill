@@ -3,8 +3,63 @@
 // to their device (AirPrint, USB, shared printers, etc).
 import type { AdminOrder } from "../../lib/api-types";
 import { SITE } from "../../data/site";
+import { adminFetch } from "./api";
 
 const money = (c: number) => `$${(c / 100).toFixed(2)}`;
+
+// --- Receipt style (from Admin → Settings → Receipt editor) -----------------
+export type ReceiptStyle = {
+  logoUrl: string; // "" = no logo
+  font: "mono" | "sans" | "serif" | "condensed";
+  fontSize: number;
+  name: string;
+  address: string;
+  phone: string;
+  footer1: string;
+  footer2: string;
+};
+
+const FONT_STACKS: Record<ReceiptStyle["font"], string> = {
+  mono: `"Courier New", ui-monospace, monospace`,
+  sans: `Arial, Helvetica, sans-serif`,
+  serif: `Georgia, "Times New Roman", serif`,
+  condensed: `"Arial Narrow", "Helvetica Neue Condensed", Arial, sans-serif`,
+};
+
+const DEFAULT_STYLE: ReceiptStyle = {
+  logoUrl: "/photos/brand/logo-badge.webp",
+  font: "mono",
+  fontSize: 12,
+  name: "Diner Grill",
+  address: SITE.address,
+  phone: SITE.phone,
+  footer1: "Thank You!",
+  footer2: "Show this number at the counter.",
+};
+
+let cachedStyle: ReceiptStyle | null = null;
+
+async function fetchReceiptStyle(): Promise<ReceiptStyle> {
+  try {
+    const s = await adminFetch<Record<string, string>>("/api/admin/settings");
+    const font = (["mono", "sans", "serif", "condensed"] as const).find(
+      (f) => f === s.receipt_font
+    );
+    cachedStyle = {
+      logoUrl: s.receipt_logo_url ?? DEFAULT_STYLE.logoUrl,
+      font: font ?? "mono",
+      fontSize: Math.min(18, Math.max(9, Number(s.receipt_font_size) || 12)),
+      name: s.receipt_name || DEFAULT_STYLE.name,
+      address: s.receipt_address || DEFAULT_STYLE.address,
+      phone: s.receipt_phone || DEFAULT_STYLE.phone,
+      footer1: s.receipt_footer_1 ?? DEFAULT_STYLE.footer1,
+      footer2: s.receipt_footer_2 ?? DEFAULT_STYLE.footer2,
+    };
+  } catch {
+    // Offline / auth issue — print with the last known (or default) style.
+  }
+  return cachedStyle ?? DEFAULT_STYLE;
+}
 
 function esc(s: string): string {
   return s
@@ -48,7 +103,11 @@ export function setReceiptPaper(p: ReceiptPaper): void {
   }
 }
 
-export function buildReceiptHtml(order: AdminOrder, paper: ReceiptPaper = getReceiptPaper()): string {
+export function buildReceiptHtml(
+  order: AdminOrder,
+  paper: ReceiptPaper = getReceiptPaper(),
+  style: ReceiptStyle = cachedStyle ?? DEFAULT_STYLE
+): string {
   const itemsHtml = order.items
     .map((it) => {
       const mods = (it.modifiers || [])
@@ -94,8 +153,8 @@ export function buildReceiptHtml(order: AdminOrder, paper: ReceiptPaper = getRec
   body {
     width: 72mm;
     margin: 0 auto;
-    font-family: "Courier New", ui-monospace, monospace;
-    font-size: 12px;
+    font-family: ${FONT_STACKS[style.font]};
+    font-size: ${style.fontSize}px;
     line-height: 1.45;
     color: #000;
     padding: 6px 2px 14px;
@@ -141,10 +200,10 @@ export function buildReceiptHtml(order: AdminOrder, paper: ReceiptPaper = getRec
 </head>
 <body>
   <div class="center">
-    <img class="logo" src="/photos/brand/logo-badge.webp" alt="" onerror="this.style.display='none'" />
-    <div class="shop-name">Diner Grill</div>
+    ${style.logoUrl ? `<img class="logo" src="${esc(style.logoUrl)}" alt="" onerror="this.style.display='none'" />` : ""}
+    <div class="shop-name">${esc(style.name)}</div>
     <div class="tagline">Chicago &middot; Open 24 Hours</div>
-    <div class="addr">${esc(SITE.address)}<br/>${esc(SITE.phone)}</div>
+    <div class="addr">${esc(style.address)}${style.phone ? `<br/>${esc(style.phone)}` : ""}</div>
   </div>
   <div class="rule-heavy"></div>
   <div class="order-num">ORDER ${esc(order.order_number)}</div>
@@ -169,8 +228,8 @@ export function buildReceiptHtml(order: AdminOrder, paper: ReceiptPaper = getRec
           ? `<div class="paid-badge">Paid Online</div>`
           : ""
     }
-    <div class="thanks" style="margin-top:8px">Thank You!</div>
-    <div>Show this number at the counter.</div>
+    ${style.footer1 ? `<div class="thanks" style="margin-top:8px">${esc(style.footer1)}</div>` : ""}
+    ${style.footer2 ? `<div>${esc(style.footer2)}</div>` : ""}
   </div>
 </body>
 </html>`;
@@ -278,6 +337,12 @@ export function printReceiptLocally(order: AdminOrder): void {
   // Absolute safety net so the button never gets stuck.
   setTimeout(release, 5000);
 
+  // Load the receipt style (logo/font/header) before rendering; falls back
+  // to the last known or default style if the request fails.
+  void fetchReceiptStyle().then(() => printWithStyle(order, release));
+}
+
+function printWithStyle(order: AdminOrder, release: () => void): void {
   if (isIosWebKit()) {
     // iOS / in-app webviews often block popups and hidden-iframe printing,
     // so show a full-screen preview with an explicit Print button instead.

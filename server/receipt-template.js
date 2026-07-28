@@ -9,7 +9,13 @@ export const EPSON_DEFAULTS = {
   receipt_footer_1: "Thank you!",
   receipt_footer_2: "Show this ticket at the counter",
   receipt_tax_label: "Tax (10.25%)",
+  // Local (browser) print styling — not used by the plain-text Epson ticket.
+  receipt_logo_url: "/photos/brand/logo-badge.webp",
+  receipt_font: "mono",
+  receipt_font_size: "12",
 };
+
+export const RECEIPT_FONTS = ["mono", "sans", "serif", "condensed"];
 
 export const RECEIPT_SETTING_KEYS = Object.keys(EPSON_DEFAULTS);
 
@@ -79,16 +85,31 @@ export function normalizeTemplate(raw = {}) {
     receipt_footer_1: String(raw.receipt_footer_1 ?? EPSON_DEFAULTS.receipt_footer_1).slice(0, 60),
     receipt_footer_2: String(raw.receipt_footer_2 ?? EPSON_DEFAULTS.receipt_footer_2).slice(0, 60),
     receipt_tax_label: String(raw.receipt_tax_label || EPSON_DEFAULTS.receipt_tax_label).slice(0, 40),
+    receipt_logo_url: normalizeLogoUrl(raw.receipt_logo_url),
+    receipt_font: RECEIPT_FONTS.includes(raw.receipt_font) ? raw.receipt_font : EPSON_DEFAULTS.receipt_font,
+    receipt_font_size: String(Math.min(18, Math.max(9, Number(raw.receipt_font_size) || 12))),
     width,
   };
+}
+
+/** Only same-origin asset paths are allowed (no external URLs / scripts). */
+function normalizeLogoUrl(url) {
+  const s = String(url ?? EPSON_DEFAULTS.receipt_logo_url).trim();
+  if (s === "") return ""; // explicit "no logo"
+  if (/^\/(uploads|photos)\/[\w\-./]+\.(webp|png|jpe?g)$/i.test(s) && !s.includes("..")) return s;
+  return EPSON_DEFAULTS.receipt_logo_url;
 }
 
 export async function getReceiptTemplate() {
   const raw = {};
   for (const k of RECEIPT_SETTING_KEYS) {
-    raw[k] = (await getSetting(k)) || "";
+    raw[k] = await getSetting(k); // null when never set
   }
   return normalizeTemplate({
+    // Distinguish "never set" (null → default logo) from "" (logo removed).
+    receipt_logo_url: raw.receipt_logo_url ?? EPSON_DEFAULTS.receipt_logo_url,
+    receipt_font: raw.receipt_font || EPSON_DEFAULTS.receipt_font,
+    receipt_font_size: raw.receipt_font_size || EPSON_DEFAULTS.receipt_font_size,
     receipt_width: raw.receipt_width || process.env.RECEIPT_WIDTH || EPSON_DEFAULTS.receipt_width,
     receipt_name: raw.receipt_name || process.env.RECEIPT_NAME || EPSON_DEFAULTS.receipt_name,
     receipt_address: raw.receipt_address || process.env.RECEIPT_ADDRESS || EPSON_DEFAULTS.receipt_address,

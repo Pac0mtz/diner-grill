@@ -31,6 +31,9 @@ type Settings = {
   receipt_footer_1: string;
   receipt_footer_2: string;
   receipt_tax_label: string;
+  receipt_logo_url: string;
+  receipt_font: string;
+  receipt_font_size: string;
   stripe_configured: boolean;
   stripe_test_mode: boolean;
   stripe_secret_key_set: boolean;
@@ -77,6 +80,9 @@ const emptySettings: Settings = {
   receipt_footer_1: "Thank you!",
   receipt_footer_2: "Show this ticket at the counter",
   receipt_tax_label: "Tax (10.25%)",
+  receipt_logo_url: "/photos/brand/logo-badge.webp",
+  receipt_font: "mono",
+  receipt_font_size: "12",
   stripe_configured: false,
   stripe_test_mode: false,
   stripe_secret_key_set: false,
@@ -104,6 +110,9 @@ function normalizeSettings(data: Partial<Settings>): Settings {
     customer_email_completed: data.customer_email_completed === "1" ? "1" : "0",
     customer_email_cancelled: data.customer_email_cancelled === "0" ? "0" : "1",
     receipt_width: data.receipt_width || "42",
+    receipt_font: data.receipt_font || "mono",
+    receipt_font_size: data.receipt_font_size || "12",
+    receipt_logo_url: data.receipt_logo_url ?? emptySettings.receipt_logo_url,
   };
 }
 
@@ -117,6 +126,7 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [logoBusy, setLogoBusy] = useState(false);
   const [preview, setPreview] = useState("");
   const [previewWidth, setPreviewWidth] = useState(42);
   const [showPreviewMobile, setShowPreviewMobile] = useState(false);
@@ -185,6 +195,31 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
     setSettings((s) => ({ ...s, [key]: value }));
   }
 
+  async function uploadLogo(file: File) {
+    setLogoBusy(true);
+    setError(null);
+    try {
+      if (file.size > 4 * 1024 * 1024) throw new Error("Image must be under 4MB.");
+      const dataBase64 = await new Promise<string>((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result).split(",")[1] ?? "");
+        r.onerror = () => reject(new Error("Could not read the image."));
+        r.readAsDataURL(file);
+      });
+      const data = await adminFetch<{ url: string }>("/api/admin/upload", {
+        method: "POST",
+        body: { filename: file.name, dataBase64 },
+      });
+      patch("receipt_logo_url", data.url);
+      setNotice("Logo uploaded — remember to Save settings.");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return onUnauthorized();
+      setError(err instanceof Error ? err.message : "Logo upload failed.");
+    } finally {
+      setLogoBusy(false);
+    }
+  }
+
   async function save(extra: Record<string, unknown> = {}) {
     setBusy(true);
     setError(null);
@@ -216,6 +251,9 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
         receipt_footer_1: settings.receipt_footer_1,
         receipt_footer_2: settings.receipt_footer_2,
         receipt_tax_label: settings.receipt_tax_label,
+        receipt_logo_url: settings.receipt_logo_url,
+        receipt_font: settings.receipt_font,
+        receipt_font_size: settings.receipt_font_size,
         stripe_publishable_key: settings.stripe_publishable_key,
         ...extra,
       };
@@ -575,6 +613,86 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
                 value={settings.receipt_tax_label}
                 onChange={(e) => patch("receipt_tax_label", e.target.value)}
               />
+            </div>
+
+            {/* Local-print styling: logo, font, and size (browser/AirPrint receipts) */}
+            <div className="sm:col-span-2 rounded-md border-2 border-ink/15 p-3">
+              <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.16em] text-ink/60">
+                Printed receipt style (local printing)
+              </p>
+              <div className="flex flex-wrap items-center gap-3">
+                {settings.receipt_logo_url ? (
+                  <img
+                    src={settings.receipt_logo_url}
+                    alt="Receipt logo"
+                    className="h-14 w-14 rounded-full border-2 border-ink/20 object-cover"
+                  />
+                ) : (
+                  <div className="grid h-14 w-14 place-items-center rounded-full border-2 border-dashed border-ink/25 font-mono text-[9px] uppercase text-ink/40">
+                    No logo
+                  </div>
+                )}
+                <label className="cursor-pointer rounded-md border-2 border-ink/25 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/70 hover:border-ink hover:text-ink">
+                  {logoBusy ? "Uploading…" : "Upload logo"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="hidden"
+                    disabled={logoBusy}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      e.target.value = "";
+                      if (f) void uploadLogo(f);
+                    }}
+                  />
+                </label>
+                {settings.receipt_logo_url && (
+                  <button
+                    type="button"
+                    onClick={() => patch("receipt_logo_url", "")}
+                    className="rounded-md border-2 border-ink/25 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-ink/50 hover:border-chili hover:text-chili"
+                  >
+                    Remove logo
+                  </button>
+                )}
+              </div>
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="receipt-font" className={labelClass}>
+                    Font
+                  </label>
+                  <select
+                    id="receipt-font"
+                    className={inputClass}
+                    value={settings.receipt_font}
+                    onChange={(e) => patch("receipt_font", e.target.value)}
+                  >
+                    <option value="mono">Typewriter (classic receipt)</option>
+                    <option value="sans">Modern (Arial)</option>
+                    <option value="serif">Serif (Georgia)</option>
+                    <option value="condensed">Narrow (fits more per line)</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="receipt-font-size" className={labelClass}>
+                    Font size — {settings.receipt_font_size}px
+                  </label>
+                  <input
+                    id="receipt-font-size"
+                    type="range"
+                    min={9}
+                    max={18}
+                    step={1}
+                    className="mt-3 w-full accent-chili"
+                    value={Number(settings.receipt_font_size) || 12}
+                    onChange={(e) => patch("receipt_font_size", e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="mt-3 text-[12px] leading-relaxed text-ink/50">
+                Applies to receipts printed from this device (Print button on orders). The Epson
+                mail-to-print ticket stays plain text.
+              </p>
             </div>
           </div>
 

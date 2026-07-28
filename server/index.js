@@ -36,6 +36,7 @@ import {
   SAMPLE_ORDER,
   EPSON_DEFAULTS,
   RECEIPT_SETTING_KEYS,
+  RECEIPT_FONTS,
 } from "./receipt-template.js";
 import {
   getStripe,
@@ -1517,6 +1518,9 @@ async function publicSettings() {
     receipt_footer_1: receipt.receipt_footer_1,
     receipt_footer_2: receipt.receipt_footer_2,
     receipt_tax_label: receipt.receipt_tax_label,
+    receipt_logo_url: receipt.receipt_logo_url,
+    receipt_font: receipt.receipt_font,
+    receipt_font_size: receipt.receipt_font_size,
   };
 }
 
@@ -1602,6 +1606,18 @@ app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
       if (k === "receipt_width") {
         const w = Math.min(64, Math.max(24, Number(body.receipt_width) || 42));
         await setSetting(k, String(w));
+      } else if (k === "receipt_font") {
+        const f = String(body[k] ?? "").trim().toLowerCase();
+        await setSetting(k, RECEIPT_FONTS.includes(f) ? f : "mono");
+      } else if (k === "receipt_font_size") {
+        const s = Math.min(18, Math.max(9, Number(body[k]) || 12));
+        await setSetting(k, String(s));
+      } else if (k === "receipt_logo_url") {
+        const u = String(body[k] ?? "").trim();
+        // "" = no logo; otherwise must be a same-origin /uploads/ or /photos/ image.
+        const ok = u === "" || (/^\/(uploads|photos)\/[\w\-./]+\.(webp|png|jpe?g)$/i.test(u) && !u.includes(".."));
+        if (!ok) return bad(res, 400, "Logo must be an uploaded image.");
+        await setSetting(k, u);
       } else {
         await setSetting(k, body[k] == null ? "" : String(body[k]).trim());
       }
