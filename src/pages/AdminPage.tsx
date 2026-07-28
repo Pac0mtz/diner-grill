@@ -11,6 +11,8 @@ import {
   ExternalLink,
   LayoutDashboard,
   Download,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useRouteSeo } from "../hooks/usePageMeta";
 import { useAdminPwa } from "../hooks/useAdminPwa";
@@ -99,6 +101,24 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>("dashboard");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem("dg_admin_sidebar") === "collapsed";
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleSidebar() {
+    setSidebarCollapsed((c) => {
+      try {
+        localStorage.setItem("dg_admin_sidebar", c ? "open" : "collapsed");
+      } catch {
+        /* private mode — preference just won't persist */
+      }
+      return !c;
+    });
+  }
 
   const logout = useCallback(() => {
     void adminLogout();
@@ -254,11 +274,16 @@ export default function AdminPage() {
     );
   }
 
-  const navItems = (
-    <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Admin sections">
-      <p className="mb-2 px-3 font-mono text-[10px] uppercase tracking-[0.22em] text-cream/35">
-        Navigate
-      </p>
+  const renderNav = (collapsed: boolean) => (
+    <nav
+      className={`flex flex-1 flex-col gap-1 py-4 ${collapsed ? "px-2" : "px-3"}`}
+      aria-label="Admin sections"
+    >
+      {!collapsed && (
+        <p className="mb-2 px-3 font-mono text-[10px] uppercase tracking-[0.22em] text-cream/35">
+          Navigate
+        </p>
+      )}
       {TABS.map((t) => {
         const Icon = t.icon;
         const selected = tab === t.id;
@@ -268,7 +293,11 @@ export default function AdminPage() {
             type="button"
             onClick={() => selectTab(t.id)}
             aria-current={selected ? "page" : undefined}
-            className={`group flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
+            aria-label={collapsed ? t.label : undefined}
+            title={collapsed ? t.label : undefined}
+            className={`group flex w-full items-center rounded-md text-left transition-colors ${
+              collapsed ? "justify-center px-0 py-3" : "gap-3 px-3 py-2.5"
+            } ${
               selected
                 ? "bg-mustard text-ink shadow-ticket"
                 : "text-cream/70 hover:bg-cream/10 hover:text-cream"
@@ -278,63 +307,105 @@ export default function AdminPage() {
               className={`h-5 w-5 shrink-0 ${selected ? "text-chili" : "text-cream/45 group-hover:text-cream/80"}`}
               aria-hidden
             />
-            <span className="min-w-0">
-              <span className="block font-mono text-[12px] font-semibold uppercase tracking-[0.14em]">
-                {t.label}
+            {!collapsed && (
+              <span className="min-w-0">
+                <span className="block font-mono text-[12px] font-semibold uppercase tracking-[0.14em]">
+                  {t.label}
+                </span>
+                <span
+                  className={`mt-0.5 block text-[11px] leading-tight ${
+                    selected ? "text-ink/55" : "text-cream/35"
+                  }`}
+                >
+                  {t.hint}
+                </span>
               </span>
-              <span
-                className={`mt-0.5 block text-[11px] leading-tight ${
-                  selected ? "text-ink/55" : "text-cream/35"
-                }`}
-              >
-                {t.hint}
-              </span>
-            </span>
+            )}
           </button>
         );
       })}
     </nav>
   );
+  const navItems = renderNav(false);
 
   return (
     <div className="paper-grain min-h-screen bg-cream text-ink lg:flex">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col border-r-2 border-ink bg-ink text-cream lg:flex">
-        <div className="border-b border-cream/10 px-5 py-5">
-          <p className="font-display text-2xl tracking-[0.08em]">
-            DINER <span className="text-chili">GRILL</span>
-          </p>
-          <p className="mt-1 inline-block rounded-sm bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ink">
-            Counter admin
-          </p>
+      <aside
+        className={`sticky top-0 hidden h-svh shrink-0 flex-col border-r-2 border-ink bg-ink text-cream transition-[width] duration-200 lg:flex ${
+          sidebarCollapsed ? "w-[4.25rem]" : "w-64"
+        }`}
+      >
+        <div
+          className={`flex items-start border-b border-cream/10 ${
+            sidebarCollapsed ? "justify-center px-2 py-4" : "justify-between gap-2 px-5 py-5"
+          }`}
+        >
+          {!sidebarCollapsed && (
+            <div>
+              <p className="font-display text-2xl tracking-[0.08em]">
+                DINER <span className="text-chili">GRILL</span>
+              </p>
+              <p className="mt-1 inline-block rounded-sm bg-mustard px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-ink">
+                Counter admin
+              </p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className="rounded-md border border-cream/20 p-2 text-cream/60 transition-colors hover:border-cream/50 hover:text-cream"
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen className="h-4 w-4" aria-hidden />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" aria-hidden />
+            )}
+          </button>
         </div>
 
-        {navItems}
+        {renderNav(sidebarCollapsed)}
 
-        <div className="mt-auto space-y-2 border-t border-cream/10 p-3">
-          <InstallAppButton
-            showInstall={pwa.showInstall}
-            canInstall={pwa.canInstall}
-            iosHint={pwa.iosHint}
-            onInstall={() => void pwa.install()}
-            dark
-          />
+        <div
+          className={`mt-auto space-y-2 border-t border-cream/10 ${
+            sidebarCollapsed ? "p-2" : "p-3"
+          }`}
+        >
+          {!sidebarCollapsed && (
+            <InstallAppButton
+              showInstall={pwa.showInstall}
+              canInstall={pwa.canInstall}
+              iosHint={pwa.iosHint}
+              onInstall={() => void pwa.install()}
+              dark
+            />
+          )}
           <a
             href="/"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-2 rounded-md px-3 py-2 font-mono text-[11px] uppercase tracking-[0.14em] text-cream/45 transition-colors hover:bg-cream/10 hover:text-cream"
+            aria-label="View site"
+            title="View site"
+            className={`flex items-center rounded-md font-mono text-[11px] uppercase tracking-[0.14em] text-cream/45 transition-colors hover:bg-cream/10 hover:text-cream ${
+              sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2 px-3 py-2"
+            }`}
           >
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-            View site
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {!sidebarCollapsed && "View site"}
           </a>
           <button
             type="button"
             onClick={logout}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 font-mono text-[11px] uppercase tracking-[0.14em] text-cream/55 transition-colors hover:bg-cream/10 hover:text-cream"
+            aria-label="Sign out"
+            title="Sign out"
+            className={`flex w-full items-center rounded-md font-mono text-[11px] uppercase tracking-[0.14em] text-cream/55 transition-colors hover:bg-cream/10 hover:text-cream ${
+              sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-2 px-3 py-2.5"
+            }`}
           >
-            <LogOut className="h-3.5 w-3.5" aria-hidden />
-            Sign out
+            <LogOut className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            {!sidebarCollapsed && "Sign out"}
           </button>
         </div>
       </aside>
