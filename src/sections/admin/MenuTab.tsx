@@ -256,8 +256,9 @@ function ItemRow({
         onChange={toggleAvailable}
         disabled={busy}
         className="h-4 w-4 accent-chili"
+        aria-label="On menu"
       />
-      <span className="hidden sm:inline">On menu</span>
+      <span className="hidden sm:inline" aria-hidden>On menu</span>
     </label>
   );
 
@@ -300,7 +301,7 @@ function ItemRow({
           {error && <span role="alert" className="block text-xs font-medium text-ember">{error}</span>}
         </div>
         <span className="shrink-0 font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex max-w-[45%] shrink-0 flex-wrap items-center justify-end gap-1.5">
           {onMenuToggle}
           {quickActions("h-8 w-8")}
         </div>
