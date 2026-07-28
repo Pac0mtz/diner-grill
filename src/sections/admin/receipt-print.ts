@@ -28,7 +28,27 @@ function orderTime(iso: string): string {
   });
 }
 
-export function buildReceiptHtml(order: AdminOrder): string {
+export type ReceiptPaper = "thermal" | "letter";
+
+const PAPER_KEY = "dg_receipt_paper";
+
+export function getReceiptPaper(): ReceiptPaper {
+  try {
+    return localStorage.getItem(PAPER_KEY) === "letter" ? "letter" : "thermal";
+  } catch {
+    return "thermal";
+  }
+}
+
+export function setReceiptPaper(p: ReceiptPaper): void {
+  try {
+    localStorage.setItem(PAPER_KEY, p);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function buildReceiptHtml(order: AdminOrder, paper: ReceiptPaper = getReceiptPaper()): string {
   const itemsHtml = order.items
     .map((it) => {
       const mods = (it.modifiers || [])
@@ -62,10 +82,14 @@ export function buildReceiptHtml(order: AdminOrder): string {
 <title>Receipt ${esc(order.order_number)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  /* Standard paper size — regular printers choke on custom 80mm-tall pages
-     and can spit out an extremely long page. The receipt is simply a narrow
-     72mm column at the top of a normal sheet. */
-  @page { margin: 10mm; }
+  /* Two paper modes:
+     - thermal: 80mm roll printers need an explicit 80mm-wide auto-height
+       page, otherwise the driver assumes a full letter-length sheet and
+       feeds a very long blank receipt.
+     - letter: regular printers choke on custom 80mm pages and can spit out
+       an extremely long page — print a narrow 72mm column on a normal
+       sheet instead. */
+  ${paper === "thermal" ? "@page { size: 80mm auto; margin: 0; }" : "@page { margin: 10mm; }"}
   html, body { background: #fff; }
   body {
     width: 72mm;
@@ -189,8 +213,14 @@ function showReceiptOverlay(order: AdminOrder): void {
   };
 
   const printBtn = mkBtn("🖨 Print", true);
+  const paperBtn = mkBtn("", false);
   const closeBtn = mkBtn("Close", false);
-  bar.append(printBtn, closeBtn);
+  bar.append(printBtn, paperBtn, closeBtn);
+
+  const paperLabel = () =>
+    getReceiptPaper() === "thermal" ? "80mm roll" : "Reg. paper";
+  paperBtn.textContent = paperLabel();
+  paperBtn.style.fontSize = "11px";
 
   const frameWrap = document.createElement("div");
   frameWrap.style.cssText =
@@ -203,12 +233,21 @@ function showReceiptOverlay(order: AdminOrder): void {
   overlay.append(bar, frameWrap);
   document.body.appendChild(overlay);
 
-  const doc = iframe.contentDocument;
-  if (doc) {
-    doc.open();
-    doc.write(buildReceiptHtml(order));
-    doc.close();
-  }
+  const render = () => {
+    const doc = iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(buildReceiptHtml(order));
+      doc.close();
+    }
+  };
+  render();
+
+  paperBtn.addEventListener("click", () => {
+    setReceiptPaper(getReceiptPaper() === "thermal" ? "letter" : "thermal");
+    paperBtn.textContent = paperLabel();
+    render();
+  });
 
   const close = () => overlay.remove();
   closeBtn.addEventListener("click", close);
