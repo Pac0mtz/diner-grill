@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
-import { ImageMinus, ImagePlus, Pencil, Plus, Trash2, UtensilsCrossed } from "lucide-react";
+import { ImageMinus, ImagePlus, LayoutGrid, Pencil, Plus, Rows3, Trash2, UtensilsCrossed } from "lucide-react";
 import type { AdminItem, AdminSection } from "../../lib/api-types";
 import { dollarsToCents, formatCents } from "../../lib/money";
 import { adminFetch, ApiError } from "./api";
@@ -13,6 +13,18 @@ type MenuTabProps = {
 const inputClass =
   "w-full rounded-md border-2 border-ink/25 bg-cream px-2.5 py-2 text-sm text-ink placeholder:text-ink/35 focus:border-chili focus:outline-none";
 const labelClass = "mb-1 block font-mono text-[10px] uppercase tracking-[0.14em] text-ink/55";
+
+/* View mode: photo cards vs compact table, remembered per device. */
+export type MenuView = "cards" | "table";
+const VIEW_KEY = "dg_menu_view";
+
+function getSavedView(): MenuView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === "table" ? "table" : "cards";
+  } catch {
+    return "cards";
+  }
+}
 
 function centsToDollars(cents: number): string {
   return (cents / 100).toFixed(2);
@@ -46,11 +58,13 @@ async function uploadImageFile(file: File): Promise<string> {
 function ItemRow({
   item,
   sections,
+  view,
   onSaved,
   onUnauthorized,
 }: {
   item: AdminItem;
   sections: AdminMenuSection[];
+  view: MenuView;
   onSaved: () => void;
   onUnauthorized: () => void;
 }) {
@@ -183,112 +197,166 @@ function ItemRow({
     if (file) uploadPhoto(file);
   }
 
+  /* Shared quick actions: photo upload/remove, edit, delete (+ hidden file input). */
+  const quickActions = (size: string) => (
+    <>
+      <button
+        onClick={() => fileRef.current?.click()}
+        disabled={busy}
+        className={`grid ${size} place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-chili hover:text-chili disabled:opacity-40`}
+        aria-label={item.image ? `Replace photo for ${item.name}` : `Upload photo for ${item.name}`}
+        title={item.image ? "Replace photo" : "Upload photo"}
+      >
+        <ImagePlus className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      {item.image && (
+        <button
+          onClick={removePhoto}
+          disabled={busy}
+          className={`grid ${size} place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40`}
+          aria-label={`Remove photo for ${item.name}`}
+          title="Remove photo"
+        >
+          <ImageMinus className="h-3.5 w-3.5" aria-hidden />
+        </button>
+      )}
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFile}
+        aria-hidden
+      />
+      <button
+        onClick={startEdit}
+        className={`grid ${size} place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ink hover:text-ink`}
+        aria-label={`Edit ${item.name}`}
+        title="Edit"
+      >
+        <Pencil className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      <button
+        onClick={remove}
+        disabled={busy}
+        className={`grid ${size} place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40`}
+        aria-label={`Delete ${item.name}`}
+        title="Delete"
+      >
+        <Trash2 className="h-3.5 w-3.5" aria-hidden />
+      </button>
+    </>
+  );
+
+  const onMenuToggle = (
+    <label className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/60">
+      <input
+        type="checkbox"
+        checked={!!item.available}
+        onChange={toggleAvailable}
+        disabled={busy}
+        className="h-4 w-4 accent-chili"
+      />
+      <span className="hidden sm:inline">On menu</span>
+    </label>
+  );
+
+  const tagBadge = item.tag && (
+    <span className="rounded-sm bg-ink px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-cream">
+      {item.tag}
+    </span>
+  );
+
+  if (!editing && view === "table") {
+    return (
+      <li
+        className={`flex items-center gap-3 px-2 py-2 ${
+          item.available ? "" : "bg-ink/5 opacity-60"
+        }`}
+      >
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            loading="lazy"
+            className="h-9 w-9 shrink-0 rounded-md border border-ink/15 object-cover"
+          />
+        ) : (
+          <span
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-md border border-dashed border-ink/20 text-ink/30"
+            title="No photo yet"
+          >
+            <UtensilsCrossed className="h-4 w-4" aria-hidden />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className="truncate text-sm font-semibold">{item.name}</span>
+            {tagBadge}
+          </span>
+          {item.description && (
+            <span className="hidden truncate text-xs text-ink/50 md:block">{item.description}</span>
+          )}
+          {error && <span role="alert" className="block text-xs font-medium text-ember">{error}</span>}
+        </div>
+        <span className="shrink-0 font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {onMenuToggle}
+          {quickActions("h-8 w-8")}
+        </div>
+      </li>
+    );
+  }
+
   if (!editing) {
     return (
       <li
-        className={`rounded-md border px-3 py-2.5 ${
+        className={`flex flex-col overflow-hidden rounded-md border ${
           item.available ? "border-ink/15 bg-cream/60" : "border-ink/10 bg-ink/5 opacity-60"
         }`}
       >
-        <div className="flex items-start gap-3">
-          {item.image ? (
-            <img
-              src={item.image}
-              alt={item.name}
-              loading="lazy"
-              className="h-12 w-12 shrink-0 rounded-md border-2 border-ink/15 object-cover"
-            />
-          ) : (
-            <span
-              className="grid h-12 w-12 shrink-0 place-items-center rounded-md border-2 border-dashed border-ink/20 text-ink/30"
-              title="No photo yet"
-              aria-label="No photo yet"
-            >
-              <UtensilsCrossed className="h-5 w-5" aria-hidden />
-            </span>
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-semibold">
-                  {item.name}
-                  {item.tag && (
-                    <span className="ml-2 rounded-sm bg-ink px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.12em] text-cream">
-                      {item.tag}
-                    </span>
-                  )}
-                </span>
-                {item.description && (
-                  <span className="mt-0.5 block truncate text-xs text-ink/55">{item.description}</span>
-                )}
-              </span>
-              <span className="shrink-0 font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-ink/10 pt-2.5 sm:justify-end">
-          <label className="mr-auto flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/60 sm:mr-0">
-            <input
-              type="checkbox"
-              checked={!!item.available}
-              onChange={toggleAvailable}
-              disabled={busy}
-              className="h-4 w-4 accent-chili"
-            />
-            On menu
-          </label>
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={busy}
-            className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-chili hover:text-chili disabled:opacity-40"
-            aria-label={item.image ? `Replace photo for ${item.name}` : `Upload photo for ${item.name}`}
-            title={item.image ? "Replace photo" : "Upload photo"}
-          >
-            <ImagePlus className="h-3.5 w-3.5" aria-hidden />
-          </button>
-          {item.image && (
-            <button
-              onClick={removePhoto}
-              disabled={busy}
-              className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
-              aria-label={`Remove photo for ${item.name}`}
-              title="Remove photo"
-            >
-              <ImageMinus className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          )}
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="hidden"
-            onChange={handleFile}
-            aria-hidden
+        {item.image ? (
+          <img
+            src={item.image}
+            alt={item.name}
+            loading="lazy"
+            className="h-32 w-full border-b border-ink/10 object-cover"
           />
-          <button
-            onClick={startEdit}
-            className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ink hover:text-ink"
-            aria-label={`Edit ${item.name}`}
+        ) : (
+          <span
+            className="grid h-32 w-full place-items-center border-b border-dashed border-ink/15 text-ink/25"
+            title="No photo yet"
+            aria-label="No photo yet"
           >
-            <Pencil className="h-3.5 w-3.5" aria-hidden />
-          </button>
-          <button
-            onClick={remove}
-            disabled={busy}
-            className="grid h-9 w-9 place-items-center rounded-md border border-ink/25 text-ink/60 transition-colors hover:border-ember hover:text-ember disabled:opacity-40"
-            aria-label={`Delete ${item.name}`}
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-          </button>
+            <UtensilsCrossed className="h-8 w-8" aria-hidden />
+          </span>
+        )}
+        <div className="flex flex-1 flex-col p-3">
+          <div className="flex items-start justify-between gap-2">
+            <span className="min-w-0">
+              <span className="flex flex-wrap items-center gap-2 text-sm font-semibold">
+                <span className="truncate">{item.name}</span>
+                {tagBadge}
+              </span>
+              {item.description && (
+                <span className="mt-0.5 line-clamp-2 block text-xs text-ink/55">{item.description}</span>
+              )}
+            </span>
+            <span className="shrink-0 font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
+          </div>
+
+          <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-ink/10 pt-2.5 [margin-top:auto]">
+            <span className="mr-auto">{onMenuToggle}</span>
+            {quickActions("h-9 w-9")}
+          </div>
+          {error && <p role="alert" className="mt-2 text-xs font-medium text-ember">{error}</p>}
         </div>
-        {error && <p role="alert" className="mt-2 text-xs font-medium text-ember">{error}</p>}
       </li>
     );
   }
 
   return (
-    <li className="rounded-md border-2 border-ink bg-cream p-3">
+    <li className={`rounded-md border-2 border-ink bg-cream p-3 ${view === "cards" ? "sm:col-span-2 xl:col-span-3" : ""}`}>
       <div className="grid gap-2 sm:grid-cols-[1fr_90px]">
         <div>
           <label className={labelClass} htmlFor={`item-name-${item.id}`}>Name</label>
@@ -566,11 +634,13 @@ function NewItemForm({
 function SectionCard({
   section,
   sections,
+  view,
   onChanged,
   onUnauthorized,
 }: {
   section: AdminMenuSection;
   sections: AdminMenuSection[];
+  view: MenuView;
   onChanged: () => void;
   onUnauthorized: () => void;
 }) {
@@ -696,18 +766,33 @@ function SectionCard({
         )}
       </div>
 
-      <ul className="mt-4 space-y-2">
+      {view === "table" && section.items.length > 0 && (
+        <div className="mt-4 flex items-center gap-3 border-b border-ink/15 px-2 pb-1.5 font-mono text-[9px] uppercase tracking-[0.14em] text-ink/40">
+          <span className="w-9 shrink-0">Photo</span>
+          <span className="flex-1">Item</span>
+          <span className="shrink-0">Price</span>
+          <span className="shrink-0 pr-1">On menu · Actions</span>
+        </div>
+      )}
+      <ul
+        className={
+          view === "table"
+            ? "divide-y divide-ink/10"
+            : "mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+        }
+      >
         {section.items.map((item) => (
           <ItemRow
             key={item.id}
             item={item}
             sections={sections}
+            view={view}
             onSaved={onChanged}
             onUnauthorized={onUnauthorized}
           />
         ))}
         {section.items.length === 0 && (
-          <li className="py-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">
+          <li className="py-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40 sm:col-span-2 xl:col-span-3">
             No items yet
           </li>
         )}
@@ -730,6 +815,16 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
   const [newLabel, setNewLabel] = useState("");
   const [newNote, setNewNote] = useState("");
   const [busy, setBusy] = useState(false);
+  const [view, setView] = useState<MenuView>(getSavedView);
+
+  function changeView(v: MenuView) {
+    setView(v);
+    try {
+      localStorage.setItem(VIEW_KEY, v);
+    } catch {
+      /* private mode — view just won't persist */
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -852,6 +947,34 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
           <Plus className="h-3.5 w-3.5" aria-hidden />
           <span className="hidden sm:inline">Section</span>
         </button>
+        <div
+          className="flex shrink-0 items-center gap-1 self-center rounded-md border-2 border-ink/15 p-1"
+          role="group"
+          aria-label="View style"
+        >
+          <button
+            type="button"
+            onClick={() => changeView("cards")}
+            aria-pressed={view === "cards"}
+            title="Card view"
+            className={`grid h-8 w-8 place-items-center rounded ${
+              view === "cards" ? "bg-ink text-cream" : "text-ink/50 hover:text-ink"
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden />
+          </button>
+          <button
+            type="button"
+            onClick={() => changeView("table")}
+            aria-pressed={view === "table"}
+            title="Table view"
+            className={`grid h-8 w-8 place-items-center rounded ${
+              view === "table" ? "bg-ink text-cream" : "text-ink/50 hover:text-ink"
+            }`}
+          >
+            <Rows3 className="h-4 w-4" aria-hidden />
+          </button>
+        </div>
       </div>
 
       {addingSection ? (
@@ -904,6 +1027,7 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
           key={active.id}
           section={active}
           sections={sections}
+          view={view}
           onChanged={load}
           onUnauthorized={onUnauthorized}
         />
