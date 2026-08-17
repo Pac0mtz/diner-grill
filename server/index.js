@@ -1644,6 +1644,19 @@ app.use("/uploads", (req, res) => bad(res, 404, "Not found."));
 // ---------------------------------------------------------------------------
 // SEO: robots + sitemap (always, even without a production build)
 // ---------------------------------------------------------------------------
+app.get("/.well-known/apple-developer-merchantid-domain-association", (_req, res) => {
+  const file = path.join(
+    __dirname,
+    "..",
+    "public",
+    ".well-known",
+    "apple-developer-merchantid-domain-association"
+  );
+  res.type("text/plain").sendFile(file, (err) => {
+    if (err && !res.headersSent) bad(res, 404, "Not found.");
+  });
+});
+
 app.get("/robots.txt", (_req, res) => {
   res.type("text/plain").send(`User-agent: *
 Allow: /

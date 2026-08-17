@@ -1,5 +1,11 @@
 import { useState, type FormEvent } from "react";
-import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import {
+  Elements,
+  ExpressCheckoutElement,
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import type { Stripe } from "@stripe/stripe-js";
 import { Lock, ArrowLeft } from "lucide-react";
 import type { CartLine } from "../../lib/order-cart";
@@ -31,8 +37,7 @@ function PaymentForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function confirm() {
     if (!stripe || !elements || submitting) return;
     setSubmitting(true);
     setError(null);
@@ -58,9 +63,36 @@ function PaymentForm({
     setSubmitting(false);
   }
 
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+    await confirm();
+  }
+
   return (
     <form onSubmit={handleSubmit} className="mt-6">
-      <PaymentElement options={{ layout: "tabs" }} />
+      <ExpressCheckoutElement
+        options={{
+          layout: { maxColumns: 2, maxRows: 1 },
+          paymentMethods: {
+            applePay: "always",
+            googlePay: "always",
+            link: "auto",
+            paypal: "never",
+            amazonPay: "never",
+          },
+          buttonHeight: 48,
+        }}
+        onConfirm={() => void confirm()}
+      />
+      <p className="my-5 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink/40">
+        or pay with card
+      </p>
+      <PaymentElement
+        options={{
+          layout: "tabs",
+          wallets: { applePay: "never", googlePay: "never" },
+        }}
+      />
       {error && (
         <p role="alert" className="mt-4 rounded-md border-2 border-ember/60 bg-ember/10 px-3 py-2.5 text-sm font-medium text-ember">
           {error}
