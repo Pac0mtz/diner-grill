@@ -100,4 +100,5 @@ export type AdminItem = {
   available: 0 | 1;
   sort: number;
   image: string | null;
+  modifier_groups?: ModifierGroup[];
 };

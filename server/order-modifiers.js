@@ -381,6 +381,92 @@ function cloneGroup(g) {
   };
 }
 
+/** Presets staff can attach in Admin → Menu (Egg style, Toast, sizes, …). */
+export function listModifierTemplates() {
+  return Object.values(GROUPS).map(cloneGroup);
+}
+
+function slug(value) {
+  return String(value || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "")
+    .slice(0, 48);
+}
+
+export function parseStoredGroups(raw) {
+  if (raw == null || raw === "") return null;
+  try {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Validate / normalize groups from Admin. Empty array = no customizations. */
+export function sanitizeModifierGroups(raw) {
+  if (!Array.isArray(raw)) return { ok: false, error: "modifier_groups must be an array." };
+  const out = [];
+  const seen = new Set();
+  for (const g of raw) {
+    if (!g || typeof g !== "object") continue;
+    const id = slug(g.id || g.label);
+    if (!id || seen.has(id)) {
+      return { ok: false, error: "Each customization needs a unique name." };
+    }
+    seen.add(id);
+    const options = [];
+    const optSeen = new Set();
+    for (const o of g.options || []) {
+      if (!o || typeof o !== "object") continue;
+      const oid = slug(o.id || o.label);
+      if (!oid || optSeen.has(oid)) continue;
+      const price = Number(o.price_cents);
+      if (!Number.isInteger(price) || price < 0) {
+        return { ok: false, error: `Price for “${o.label || oid}” must be $0 or more.` };
+      }
+      optSeen.add(oid);
+      options.push({
+        id: oid,
+        label: String(o.label || oid).trim().slice(0, 80),
+        price_cents: price,
+      });
+    }
+    if (options.length === 0) {
+      return { ok: false, error: `“${g.label || id}” needs at least one choice.` };
+    }
+    const required = g.required !== false;
+    const min = Number.isInteger(Number(g.min)) ? Number(g.min) : required ? 1 : 0;
+    const max = Number.isInteger(Number(g.max)) ? Number(g.max) : 1;
+    const group = {
+      id,
+      label: String(g.label || id).trim().slice(0, 80),
+      required,
+      min,
+      max: Math.max(max, 1),
+      options,
+    };
+    if (Number.isInteger(Number(g.free_count)) && Number(g.free_count) >= 0) {
+      group.free_count = Number(g.free_count);
+    }
+    out.push(group);
+  }
+  return { ok: true, groups: out };
+}
+
+/**
+ * Stored JSON wins (including []). Legacy items with NULL still use section/name rules.
+ */
+export function groupsForItem(item, sectionLabel) {
+  if (item && item.modifier_groups_json != null && item.modifier_groups_json !== "") {
+    const parsed = parseStoredGroups(item.modifier_groups_json);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+  return modifiersForItem(sectionLabel, item && item.name);
+}
+
 /**
  * Which modifier groups apply to this menu item.
  * @param {string} sectionLabel
@@ -539,7 +625,7 @@ function biscuitsNeedsEggStyle(picked) {
  * @returns {{ ok: true, unit_price_cents: number, modifiers: object[], name_suffix: string } | { ok: false, error: string }}
  */
 export function priceLineWithModifiers(item, sectionLabel, selections) {
-  const groups = modifiersForItem(sectionLabel, item.name);
+  const groups = groupsForItem(item, sectionLabel);
   const picked = Array.isArray(selections) ? selections : [];
   const resolved = [];
   const needsBiscuitEgg = biscuitsNeedsEggStyle(picked);
@@ -639,9 +725,32 @@ export function priceLineWithModifiers(item, sectionLabel, selections) {
 export function attachModifiersToSections(sections) {
   return sections.map((s) => ({
     ...s,
-    items: (s.items || []).map((item) => ({
-      ...item,
-      modifier_groups: modifiersForItem(s.label, item.name),
-    })),
+    items: (s.items || []).map((item) => {
+      const { modifier_groups_json, ...rest } = item;
+      return {
+        ...rest,
+        modifier_groups: groupsForItem(item, s.label),
+      };
+    }),
   }));
+}
+
+/** Copy hardcoded rules onto existing rows once, so new items can start empty. */
+export async function backfillItemModifierGroups(queryFn) {
+  const { rows } = await queryFn(
+    `SELECT i.id, i.name, i.modifier_groups_json, s.label AS section_label
+     FROM items i
+     JOIN sections s ON s.id = i.section_id
+     WHERE i.modifier_groups_json IS NULL`
+  );
+  let n = 0;
+  for (const row of rows) {
+    const groups = modifiersForItem(row.section_label, row.name);
+    await queryFn("UPDATE items SET modifier_groups_json = $1 WHERE id = $2", [
+      JSON.stringify(groups),
+      row.id,
+    ]);
+    n += 1;
+  }
+  return n;
 }

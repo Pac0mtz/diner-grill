@@ -28,7 +28,14 @@ import {
   CUSTOMER_EMAIL_SETTING_KEYS,
   isValidEmail,
 } from "./customer-email.js";
-import { attachModifiersToSections, priceLineWithModifiers } from "./order-modifiers.js";
+import {
+  attachModifiersToSections,
+  backfillItemModifierGroups,
+  groupsForItem,
+  listModifierTemplates,
+  priceLineWithModifiers,
+  sanitizeModifierGroups,
+} from "./order-modifiers.js";
 import {
   buildReceiptText,
   getReceiptTemplate,
@@ -149,6 +156,13 @@ try {
   if (n > 0) console.log(`[server] Backfilled ${n} item photo(s) from seed menu`);
 } catch (err) {
   console.error("[server] image backfill failed:", err.message);
+}
+
+try {
+  const n = await backfillItemModifierGroups(query);
+  if (n > 0) console.log(`[server] Saved ${n} item customization set(s) from the printed-menu rules`);
+} catch (err) {
+  console.error("[server] modifier backfill failed:", err.message);
 }
 
 // Auto-configure the Stripe webhook endpoint when keys are set but no
@@ -547,7 +561,7 @@ app.get("/api/menu", h(async (req, res) => {
   const sections = (await query("SELECT id, label, note, sort FROM sections ORDER BY sort, id")).rows;
   const items = (
     await query(
-      "SELECT id, section_id, name, price_cents, description, tag, image FROM items WHERE available = 1 ORDER BY sort, id"
+      "SELECT id, section_id, name, price_cents, description, tag, image, modifier_groups_json FROM items WHERE available = 1 ORDER BY sort, id"
     )
   ).rows;
   const shaped = sections
@@ -629,7 +643,7 @@ app.post("/api/orders", optionalCustomerAuth, h(async (req, res) => {
       return bad(res, 400, "Each item needs a valid item_id and qty between 1 and 50.");
     }
     const { rows } = await query(
-      `SELECT i.id, i.name, i.price_cents, s.label AS section_label
+      `SELECT i.id, i.name, i.price_cents, i.modifier_groups_json, s.label AS section_label
        FROM items i
        JOIN sections s ON s.id = i.section_id
        WHERE i.id = $1 AND i.available = 1`,
@@ -783,12 +797,27 @@ app.get("/api/admin/menu", adminAuth, h(async (req, res) => {
   const sections = (await query("SELECT id, label, note, sort FROM sections ORDER BY sort, id")).rows;
   const items = (
     await query(
-      "SELECT id, section_id, name, price_cents, description, tag, available, sort, image FROM items ORDER BY sort, id"
+      "SELECT id, section_id, name, price_cents, description, tag, available, sort, image, modifier_groups_json FROM items ORDER BY sort, id"
     )
   ).rows;
   res.json({
-    sections: sections.map((s) => ({ ...s, items: items.filter((i) => i.section_id === s.id) })),
+    sections: sections.map((s) => ({
+      ...s,
+      items: items
+        .filter((i) => i.section_id === s.id)
+        .map((i) => {
+          const { modifier_groups_json, ...rest } = i;
+          return {
+            ...rest,
+            modifier_groups: groupsForItem(i, s.label),
+          };
+        }),
+    })),
   });
+}));
+
+app.get("/api/admin/modifier-templates", adminAuth, h(async (_req, res) => {
+  res.json({ templates: listModifierTemplates() });
 }));
 
 // --- Photo uploads ---
@@ -887,20 +916,35 @@ app.delete("/api/admin/sections/:id", adminAuth, h(async (req, res) => {
 }));
 
 // --- Items ---
+function parseItemModifierGroups(body, fallbackJson) {
+  if (!body || !("modifier_groups" in body)) {
+    return { ok: true, json: fallbackJson };
+  }
+  const sanitized = sanitizeModifierGroups(body.modifier_groups);
+  if (!sanitized.ok) return sanitized;
+  return { ok: true, json: JSON.stringify(sanitized.groups) };
+}
+
+function itemPublicAdmin(row, sectionLabel) {
+  const { modifier_groups_json, ...rest } = row;
+  return { ...rest, modifier_groups: groupsForItem(row, sectionLabel) };
+}
+
 app.post("/api/admin/items", adminAuth, h(async (req, res) => {
   const { section_id, name, price_cents, description, tag, available, sort, image } = req.body || {};
   const sectionId = Number(section_id);
   if (!Number.isInteger(sectionId)) return bad(res, 400, "section_id is required.");
-  if (!(await query("SELECT id FROM sections WHERE id = $1", [sectionId])).rows[0]) {
-    return bad(res, 400, `Section ${sectionId} does not exist.`);
-  }
+  const section = (await query("SELECT id, label FROM sections WHERE id = $1", [sectionId])).rows[0];
+  if (!section) return bad(res, 400, `Section ${sectionId} does not exist.`);
   if (!name || !String(name).trim()) return bad(res, 400, "name is required.");
   const cents = Number(price_cents);
   if (!Number.isInteger(cents) || cents < 0) {
     return bad(res, 400, "price_cents must be a non-negative integer.");
   }
+  const mods = parseItemModifierGroups(req.body, "[]");
+  if (!mods.ok) return bad(res, 400, mods.error);
   const { rows } = await query(
-    "INSERT INTO items (section_id, name, price_cents, description, tag, available, sort, image) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *",
+    "INSERT INTO items (section_id, name, price_cents, description, tag, available, sort, image, modifier_groups_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
     [
       sectionId,
       String(name).trim(),
@@ -910,9 +954,10 @@ app.post("/api/admin/items", adminAuth, h(async (req, res) => {
       available === false || available === 0 ? 0 : 1,
       Number(sort) || 0,
       imageOrNull(image),
+      mods.json,
     ]
   );
-  res.status(201).json(rows[0]);
+  res.status(201).json(itemPublicAdmin(rows[0], section.label));
 }));
 
 app.put("/api/admin/items/:id", adminAuth, h(async (req, res) => {
@@ -920,19 +965,22 @@ app.put("/api/admin/items/:id", adminAuth, h(async (req, res) => {
   const existing = (await query("SELECT * FROM items WHERE id = $1", [id])).rows[0];
   if (!existing) return bad(res, 404, "Item not found.");
   const { section_id, name, price_cents, description, tag, available, sort, image } = req.body || {};
+  let sectionLabel = null;
   if (section_id !== undefined) {
     const sid = Number(section_id);
-    if (!(await query("SELECT id FROM sections WHERE id = $1", [sid])).rows[0]) {
-      return bad(res, 400, `Section ${sid} does not exist.`);
-    }
+    const section = (await query("SELECT id, label FROM sections WHERE id = $1", [sid])).rows[0];
+    if (!section) return bad(res, 400, `Section ${sid} does not exist.`);
+    sectionLabel = section.label;
   }
   if (price_cents !== undefined && (!Number.isInteger(Number(price_cents)) || Number(price_cents) < 0)) {
     return bad(res, 400, "price_cents must be a non-negative integer.");
   }
+  const mods = parseItemModifierGroups(req.body, existing.modifier_groups_json);
+  if (!mods.ok) return bad(res, 400, mods.error);
   const nextImage = image !== undefined ? imageOrNull(image) : existing.image;
   const { rows } = await query(
-    `UPDATE items SET section_id = $1, name = $2, price_cents = $3, description = $4, tag = $5, available = $6, sort = $7, image = $8
-     WHERE id = $9 RETURNING *`,
+    `UPDATE items SET section_id = $1, name = $2, price_cents = $3, description = $4, tag = $5, available = $6, sort = $7, image = $8, modifier_groups_json = $9
+     WHERE id = $10 RETURNING *`,
     [
       section_id !== undefined ? Number(section_id) : existing.section_id,
       name !== undefined ? String(name).trim() : existing.name,
@@ -942,6 +990,7 @@ app.put("/api/admin/items/:id", adminAuth, h(async (req, res) => {
       available !== undefined ? (available === false || available === 0 ? 0 : 1) : existing.available,
       sort !== undefined ? Number(sort) || 0 : existing.sort,
       nextImage,
+      mods.json,
       id,
     ]
   );
@@ -949,7 +998,13 @@ app.put("/api/admin/items/:id", adminAuth, h(async (req, res) => {
   if (image !== undefined && existing.image && existing.image !== nextImage) {
     unlinkUploadIfOwned(existing.image);
   }
-  res.json(rows[0]);
+  if (!sectionLabel) {
+    const sec = (
+      await query("SELECT label FROM sections WHERE id = $1", [rows[0].section_id])
+    ).rows[0];
+    sectionLabel = sec ? sec.label : "";
+  }
+  res.json(itemPublicAdmin(rows[0], sectionLabel));
 }));
 
 app.delete("/api/admin/items/:id", adminAuth, h(async (req, res) => {

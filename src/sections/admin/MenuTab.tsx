@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 import { ImageMinus, ImagePlus, LayoutGrid, Pencil, Plus, Rows3, Trash2, UtensilsCrossed } from "lucide-react";
-import type { AdminItem, AdminSection } from "../../lib/api-types";
+import type { AdminItem, AdminSection, ModifierGroup } from "../../lib/api-types";
 import { dollarsToCents, formatCents } from "../../lib/money";
 import { adminFetch, ApiError } from "./api";
+import ModifierEditor, { modifierSummary } from "./ModifierEditor";
 
 export type AdminMenuSection = AdminSection & { items: AdminItem[] };
 
@@ -59,12 +60,14 @@ function ItemRow({
   item,
   sections,
   view,
+  templates,
   onSaved,
   onUnauthorized,
 }: {
   item: AdminItem;
   sections: AdminMenuSection[];
   view: MenuView;
+  templates: ModifierGroup[];
   onSaved: () => void;
   onUnauthorized: () => void;
 }) {
@@ -75,6 +78,7 @@ function ItemRow({
   const [tag, setTag] = useState(item.tag ?? "");
   const [sort, setSort] = useState(String(item.sort));
   const [sectionId, setSectionId] = useState(String(item.section_id));
+  const [mods, setMods] = useState<ModifierGroup[]>(item.modifier_groups ?? []);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -86,6 +90,7 @@ function ItemRow({
     setTag(item.tag ?? "");
     setSort(String(item.sort));
     setSectionId(String(item.section_id));
+    setMods(item.modifier_groups ?? []);
     setError(null);
     setEditing(true);
   }
@@ -117,6 +122,7 @@ function ItemRow({
           description: description.trim() || null,
           tag: tag || null,
           sort: Number(sort) || 0,
+          modifier_groups: mods,
         },
       });
       setEditing(false);
@@ -298,6 +304,11 @@ function ItemRow({
           {item.description && (
             <span className="hidden truncate text-xs text-ink/50 md:block">{item.description}</span>
           )}
+          {modifierSummary(item.modifier_groups) && (
+            <span className="hidden truncate text-[11px] text-ink/40 md:block">
+              {modifierSummary(item.modifier_groups)}
+            </span>
+          )}
           {error && <span role="alert" className="block text-xs font-medium text-ember">{error}</span>}
         </div>
         <span className="shrink-0 font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
@@ -341,6 +352,11 @@ function ItemRow({
               </span>
               {item.description && (
                 <span className="mt-0.5 line-clamp-2 block text-xs text-ink/55">{item.description}</span>
+              )}
+              {modifierSummary(item.modifier_groups) && (
+                <span className="mt-1 block text-[11px] text-ink/40">
+                  {modifierSummary(item.modifier_groups)}
+                </span>
               )}
             </span>
             <span className="shrink-0 font-mono text-sm text-chili">{formatCents(item.price_cents)}</span>
@@ -402,6 +418,7 @@ function ItemRow({
           <option value="new">New</option>
         </select>
       </div>
+      <ModifierEditor groups={mods} templates={templates} onChange={setMods} />
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {item.image ? (
           <img
@@ -636,12 +653,14 @@ function SectionCard({
   section,
   sections,
   view,
+  templates,
   onChanged,
   onUnauthorized,
 }: {
   section: AdminMenuSection;
   sections: AdminMenuSection[];
   view: MenuView;
+  templates: ModifierGroup[];
   onChanged: () => void;
   onUnauthorized: () => void;
 }) {
@@ -788,6 +807,7 @@ function SectionCard({
             item={item}
             sections={sections}
             view={view}
+            templates={templates}
             onSaved={onChanged}
             onUnauthorized={onUnauthorized}
           />
@@ -817,6 +837,7 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
   const [newNote, setNewNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState<MenuView>(getSavedView);
+  const [templates, setTemplates] = useState<ModifierGroup[]>([]);
 
   function changeView(v: MenuView) {
     setView(v);
@@ -831,6 +852,12 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
     try {
       const data = await adminFetch<{ sections: AdminMenuSection[] }>("/api/admin/menu");
       setSections(data.sections);
+      try {
+        const t = await adminFetch<{ templates: ModifierGroup[] }>("/api/admin/modifier-templates");
+        setTemplates(t.templates || []);
+      } catch {
+        /* editor still works without presets */
+      }
       setActiveId((prev) => {
         if (prev != null && data.sections.some((s) => s.id === prev)) return prev;
         return data.sections[0]?.id ?? null;
@@ -1029,6 +1056,7 @@ export default function MenuTab({ onUnauthorized }: MenuTabProps) {
           section={active}
           sections={sections}
           view={view}
+          templates={templates}
           onChanged={load}
           onUnauthorized={onUnauthorized}
         />
