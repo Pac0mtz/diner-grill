@@ -4,10 +4,13 @@ WORKDIR /app
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends curl ca-certificates python3 make g++ \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && npm install -g npm@11.18.0
 
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev --no-audit --no-fund
+RUN sed -i 's|http://package-firewall.replit.local/npm|https://registry.npmjs.org|g' package-lock.json \
+    && sed -i 's|https://package-firewall.replit.local/npm|https://registry.npmjs.org|g' package-lock.json \
+    && npm ci --include=dev --no-audit --no-fund
 
 COPY . .
 # Keep sharp (devDependency) for admin photo uploads; do not prune.
