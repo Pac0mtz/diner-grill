@@ -1652,7 +1652,7 @@ app.get("/.well-known/apple-developer-merchantid-domain-association", (_req, res
     ".well-known",
     "apple-developer-merchantid-domain-association"
   );
-  res.type("text/plain").sendFile(file, (err) => {
+  res.type("text/plain").sendFile(file, { dotfiles: "allow" }, (err) => {
     if (err && !res.headersSent) bad(res, 404, "Not found.");
   });
 });
