@@ -958,8 +958,9 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
             <div>
               <h3 className="font-display text-2xl uppercase tracking-[0.06em] sm:text-3xl">SMTP · Mail to print</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink/60">
-                Epson Connect print email + your SMTP provider (Gmail app password, Microsoft 365,
-                SendGrid, etc.).
+                Titan Mail for now (<span className="font-mono">smtp.titan.email</span> /
+                info@fieldtaskpro.com). Same SMTP sends kitchen print, staff alerts, and guest
+                order emails. Switch to a Diner Grill mailbox later in this form.
               </p>
             </div>
             <span
@@ -993,7 +994,7 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
               <input
                 id="smtp-host"
                 className={inputClass}
-                placeholder="smtp.gmail.com"
+                placeholder="smtp.titan.email"
                 value={settings.smtp_host}
                 onChange={(e) => patch("smtp_host", e.target.value)}
               />

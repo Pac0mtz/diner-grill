@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { BellRing, Check, Phone } from "lucide-react";
+import { BellRing, Check, Mail, Phone } from "lucide-react";
 import type { AdminOrder } from "../../lib/api-types";
 import { formatCents } from "../../lib/money";
 import { playOrderAlert } from "../../lib/order-alert";
@@ -85,10 +85,20 @@ export default function NewOrderTakeover({ onUnauthorized }: NewOrderTakeoverPro
     setBusy(true);
     setError(null);
     try {
-      await adminFetch(`/api/admin/orders/${order.id}`, {
+      const result = await adminFetch<{
+        customer_email_result?: { ok?: boolean; skipped?: boolean; message?: string };
+      }>(`/api/admin/orders/${order.id}`, {
         method: "PATCH",
         body: { status: "preparing" },
       });
+      const mail = result.customer_email_result;
+      if (mail && !mail.ok && !mail.skipped) {
+        setError(mail.message || "Order accepted, but the customer email failed.");
+        setQueue((prev) => prev.filter((o) => o.id !== order.id));
+        seenPaidIds.current?.delete(order.id);
+        await load();
+        return;
+      }
       setQueue((prev) => prev.filter((o) => o.id !== order.id));
       seenPaidIds.current?.delete(order.id);
       await load();
@@ -140,13 +150,25 @@ export default function NewOrderTakeover({ onUnauthorized }: NewOrderTakeoverPro
             {current.customer_name}
           </p>
 
-          <a
-            href={`tel:${current.phone.replace(/\D/g, "")}`}
-            className="mt-4 inline-flex min-h-14 w-fit items-center gap-3 rounded-md border-2 border-cream/30 bg-cream/10 px-5 py-3 font-mono text-base font-semibold uppercase tracking-[0.12em] text-cream transition-colors hover:border-mustard hover:bg-mustard/20 hover:text-mustard sm:min-h-16 sm:px-6 sm:text-lg"
-          >
-            <Phone className="h-6 w-6 shrink-0" aria-hidden />
-            {current.phone}
-          </a>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <a
+              href={`tel:${current.phone.replace(/\D/g, "")}`}
+              className="inline-flex min-h-14 w-fit items-center gap-3 rounded-md border-2 border-cream/30 bg-cream/10 px-5 py-3 font-mono text-base font-semibold uppercase tracking-[0.12em] text-cream transition-colors hover:border-mustard hover:bg-mustard/20 hover:text-mustard sm:min-h-16 sm:px-6 sm:text-lg"
+            >
+              <Phone className="h-6 w-6 shrink-0" aria-hidden />
+              {current.phone}
+            </a>
+            {current.customer_email ? (
+              <p className="inline-flex min-h-14 w-fit items-center gap-3 rounded-md border-2 border-cream/20 px-5 py-3 font-mono text-sm text-cream/80 sm:min-h-16 sm:text-base">
+                <Mail className="h-5 w-5 shrink-0 text-mustard" aria-hidden />
+                {current.customer_email}
+              </p>
+            ) : (
+              <p className="inline-flex min-h-14 w-fit items-center rounded-md border-2 border-ember/50 px-5 py-3 font-mono text-sm uppercase tracking-[0.12em] text-mustard">
+                No email on this order
+              </p>
+            )}
+          </div>
 
           {current.payment_method === "cash" && (
             <p className="mt-4 inline-flex w-fit rounded-md border-2 border-ink bg-mustard px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-[0.14em] text-ink sm:text-base">
@@ -219,8 +241,13 @@ export default function NewOrderTakeover({ onUnauthorized }: NewOrderTakeoverPro
             className="flex min-h-[5.5rem] w-full items-center justify-center gap-3 rounded-lg bg-chili px-8 py-6 font-mono text-2xl font-bold uppercase tracking-[0.16em] text-cream shadow-ticket transition-colors hover:bg-ember active:scale-[0.99] disabled:opacity-50 sm:min-h-[6.5rem] sm:py-8 sm:text-3xl"
           >
             <Check className="h-8 w-8 shrink-0 sm:h-10 sm:w-10" aria-hidden strokeWidth={3} />
-            {busy ? "Accepting…" : "Accept order"}
+            {busy ? "Accepting…" : current.customer_email ? "Accept & email guest" : "Accept order"}
           </button>
+          <p className="text-center font-mono text-xs uppercase tracking-[0.14em] text-cream/45 sm:text-sm">
+            {current.customer_email
+              ? `Sends “kitchen started” to ${current.customer_email}`
+              : "No guest email — accept still starts the ticket"}
+          </p>
           {waiting > 1 && (
             <p className="text-center font-mono text-sm uppercase tracking-[0.16em] text-cream/50">
               {waiting - 1} more after this

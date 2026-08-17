@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PauseCircle, Printer, RefreshCw, Store, Volume2, VolumeX } from "lucide-react";
+import { Mail, PauseCircle, Printer, RefreshCw, Store, Volume2, VolumeX } from "lucide-react";
 import { printReceiptLocally } from "./receipt-print";
 import type { AdminOrder, OrderStatus } from "../../lib/api-types";
 import { formatCents } from "../../lib/money";
@@ -45,11 +45,19 @@ const COLUMNS: {
   },
 ];
 
-const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string }>> = {
-  paid: { to: "preparing", label: "Accept" },
-  preparing: { to: "ready", label: "Ready" },
-  ready: { to: "done", label: "Complete" },
+const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string; emailLabel: string }>> = {
+  paid: { to: "preparing", label: "Accept", emailLabel: "Accept & email" },
+  preparing: { to: "ready", label: "Ready", emailLabel: "Ready · email guest" },
+  ready: { to: "done", label: "Complete", emailLabel: "Complete" },
 };
+
+function resendKindForStatus(status: OrderStatus): "receipt" | "accepted" | "ready" | "completed" | "cancelled" {
+  if (status === "preparing") return "accepted";
+  if (status === "ready") return "ready";
+  if (status === "done") return "completed";
+  if (status === "cancelled") return "cancelled";
+  return "receipt";
+}
 
 type OrdersTabProps = {
   onUnauthorized: () => void;
@@ -61,14 +69,20 @@ function KanbanCard({
   isFresh,
   onAdvance,
   onPrint,
+  onCancel,
+  onResend,
 }: {
   order: AdminOrder;
   busy: boolean;
   isFresh: boolean;
   onAdvance: () => void;
   onPrint: () => void;
+  onCancel: () => void;
+  onResend: () => void;
 }) {
   const next = NEXT[order.status];
+  const hasEmail = Boolean(order.customer_email?.trim());
+  const canCancel = order.status === "paid" || order.status === "preparing";
 
   return (
     <article
@@ -94,6 +108,11 @@ function KanbanCard({
 
       <p className="mt-2 truncate text-sm font-semibold">{order.customer_name}</p>
       <p className="truncate font-mono text-[11px] text-ink/50">{order.phone}</p>
+      {hasEmail ? (
+        <p className="truncate font-mono text-[11px] text-ink/50">{order.customer_email}</p>
+      ) : (
+        <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-ember/80">No email</p>
+      )}
 
       <ul className="mt-2.5 space-y-1 border-t border-dashed border-ink/20 pt-2.5 text-sm">
         {order.items.map((line, i) => (
@@ -131,17 +150,38 @@ function KanbanCard({
             disabled={busy}
             className="w-full rounded-md bg-chili px-3 py-3 font-mono text-[12px] font-bold uppercase tracking-[0.14em] text-cream transition-colors hover:bg-ember disabled:opacity-40"
           >
-            {next.label}
+            {hasEmail ? next.emailLabel : next.label}
           </button>
         )}
         {order.status !== "pending_payment" && order.status !== "cancelled" && (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onPrint}
+              className="flex items-center justify-center gap-1.5 rounded-md border border-ink/20 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/55 transition-colors hover:border-ink hover:text-ink"
+            >
+              <Printer className="h-3.5 w-3.5" aria-hidden />
+              Print
+            </button>
+            <button
+              type="button"
+              onClick={onResend}
+              disabled={busy || !hasEmail}
+              className="flex items-center justify-center gap-1.5 rounded-md border border-ink/20 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/55 transition-colors hover:border-ink hover:text-ink disabled:opacity-40"
+            >
+              <Mail className="h-3.5 w-3.5" aria-hidden />
+              Email
+            </button>
+          </div>
+        )}
+        {canCancel && (
           <button
             type="button"
-            onClick={onPrint}
-            className="flex w-full items-center justify-center gap-1.5 rounded-md border border-ink/20 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/55 transition-colors hover:border-ink hover:text-ink"
+            onClick={onCancel}
+            disabled={busy}
+            className="w-full rounded-md px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.12em] text-ink/40 transition-colors hover:text-ember disabled:opacity-40"
           >
-            <Printer className="h-3.5 w-3.5" aria-hidden />
-            Print
+            Cancel order
           </button>
         )}
       </div>
@@ -158,6 +198,7 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
   const [soundOn, setSoundOn] = useState(true);
   const [orderingOn, setOrderingOn] = useState(true);
   const [orderingBusy, setOrderingBusy] = useState(false);
+  const [flash, setFlash] = useState<{ ok: boolean; text: string } | null>(null);
   const seenIds = useRef<Set<number> | null>(null);
   const soundOnRef = useRef(true);
 
@@ -242,16 +283,47 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
   async function updateStatus(id: number, status: OrderStatus) {
     setBusyId(id);
     try {
-      await adminFetch(`/api/admin/orders/${id}`, { method: "PATCH", body: { status } });
+      const result = await adminFetch<{
+        customer_email_result?: { ok?: boolean; skipped?: boolean; message?: string };
+      }>(`/api/admin/orders/${id}`, { method: "PATCH", body: { status } });
       setFreshIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
+      const mail = result.customer_email_result;
+      if (mail && !mail.skipped) {
+        setFlash({
+          ok: Boolean(mail.ok),
+          text: mail.message || (mail.ok ? "Customer emailed." : "Customer email failed."),
+        });
+      } else if (status === "preparing") {
+        setFlash({ ok: true, text: "Order accepted." });
+      }
       await load();
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) return onUnauthorized();
       setError(err instanceof Error ? err.message : "Update failed.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function resendEmail(order: AdminOrder) {
+    setBusyId(order.id);
+    setError(null);
+    try {
+      const result = await adminFetch<{ ok?: boolean; skipped?: boolean; message?: string }>(
+        `/api/admin/orders/${order.id}/resend-email`,
+        { method: "POST", body: { kind: resendKindForStatus(order.status) } }
+      );
+      setFlash({
+        ok: Boolean(result.ok),
+        text: result.message || (result.ok ? "Email sent." : "Email failed."),
+      });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return onUnauthorized();
+      setError(err instanceof Error ? err.message : "Could not send email.");
     } finally {
       setBusyId(null);
     }
@@ -354,6 +426,19 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
         </p>
       )}
 
+      {flash && (
+        <p
+          role="status"
+          className={`mb-3 rounded-md border-2 px-3 py-2.5 text-sm font-medium ${
+            flash.ok
+              ? "border-ink/15 bg-paper text-ink/80"
+              : "border-ember/60 bg-ember/10 text-ember"
+          }`}
+        >
+          {flash.text}
+        </p>
+      )}
+
       {error && (
         <p
           role="alert"
@@ -410,6 +495,12 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                           if (n) void updateStatus(o.id, n.to);
                         }}
                         onPrint={() => printReceiptLocally(o)}
+                        onCancel={() => {
+                          if (window.confirm(`Cancel order ${o.order_number}? The guest will be emailed.`)) {
+                            void updateStatus(o.id, "cancelled");
+                          }
+                        }}
+                        onResend={() => void resendEmail(o)}
                       />
                     ))
                   )}

@@ -21,6 +21,18 @@ function envOr(_key, envName, fallback = "") {
   return process.env[envName] || fallback;
 }
 
+function siteUrl() {
+  const raw = process.env.PUBLIC_SITE_URL || process.env.COOLIFY_URL || "https://dinergrill.com";
+  return String(raw).split(",")[0].trim().replace(/\/$/, "");
+}
+
+function fromHeader(cfg) {
+  const addr = (cfg.smtp_from || "").trim();
+  if (!addr) return addr;
+  if (addr.includes("<")) return addr;
+  return `"Diner Grill" <${addr}>`;
+}
+
 function parseEmailList(raw) {
   return String(raw || "")
     .split(/[,;\s]+/)
@@ -41,7 +53,8 @@ export async function getMailPrintConfig() {
   const secureFlag = (db.smtp_secure || envOr("smtp_secure", "SMTP_SECURE", "")).toLowerCase();
   const secure = secureFlag === "1" || secureFlag === "true" || port === 465;
   const user = db.smtp_user || envOr("smtp_user", "SMTP_USER");
-  const pass = db.smtp_pass || envOr("smtp_pass", "SMTP_PASS");
+  const pass =
+    db.smtp_pass || envOr("smtp_pass", "SMTP_PASS") || envOr("smtp_password", "SMTP_PASSWORD");
   const from = db.smtp_from || envOr("smtp_from", "SMTP_FROM") || user;
   const printerEmail = db.printer_email || envOr("printer_email", "PRINTER_EMAIL");
   let method = (db.print_method || envOr("print_method", "PRINT_METHOD", "email")).toLowerCase();
@@ -98,6 +111,7 @@ async function createTransport(cfg) {
     host: cfg.smtp_host,
     port,
     secure,
+    requireTLS: !secure && port === 587,
     auth: cfg.smtp_user ? { user: cfg.smtp_user, pass: cfg.smtp_pass } : undefined,
     connectionTimeout: 15000,
     greetingTimeout: 15000,
@@ -132,7 +146,7 @@ export async function sendMailPrint(order, { overrideTo } = {}) {
   try {
     const transporter = await createTransport(cfg);
     const info = await transporter.sendMail({
-      from: cfg.smtp_from,
+      from: fromHeader(cfg),
       to,
       subject: `Order ${order.order_number} — Diner Grill`,
       text,
@@ -192,6 +206,7 @@ export async function sendOrderNotification(order) {
     .filter(Boolean)
     .join(" · ");
 
+  const adminUrl = `${siteUrl()}/admin`;
   const html = `
     <div style="font-family:Georgia,serif;max-width:520px;color:#17130f">
       <h2 style="margin:0 0 8px;color:#d8402e">New paid order — accept in admin</h2>
@@ -199,7 +214,10 @@ export async function sendOrderNotification(order) {
         <strong>${String(order.order_number).replace(/</g, "&lt;")}</strong> · ${String(contact).replace(/</g, "&lt;")}
       </p>
       <p style="margin:0 0 12px;font-size:13px;color:#555">
-        Ticket is printing. Open Counter Admin → Orders and tap <strong>Accept order</strong> when you start it — the customer gets an email.
+        Open Counter Admin and tap <strong>Accept order</strong> when you start cooking — that emails the guest.
+      </p>
+      <p style="margin:0 0 16px">
+        <a href="${adminUrl}" style="display:inline-block;background:#d8402e;color:#fffdf8;text-decoration:none;padding:10px 16px;border-radius:6px;font-weight:600">Open admin</a>
       </p>
       <pre style="background:#f4ede0;border:1px solid #ccc;padding:12px;font-size:13px;white-space:pre-wrap">${itemLines.replace(/</g, "&lt;")}</pre>
       <p style="margin:16px 0 0;font-size:16px"><strong>Total $${(order.total_cents / 100).toFixed(2)}</strong></p>
@@ -212,11 +230,11 @@ export async function sendOrderNotification(order) {
   try {
     const transporter = await createTransport(cfg);
     const info = await transporter.sendMail({
-      from: cfg.smtp_from,
+      from: fromHeader(cfg),
       to: to.join(", "),
       cc: cc.length ? cc.join(", ") : undefined,
-      subject: `🔔 New order ${order.order_number} — accept ${order.customer_name}`,
-      text: `New paid order ${order.order_number}\n${contact}\n\nAccept in Counter Admin → Orders.\n\n${ticket}`,
+      subject: `New order ${order.order_number} — accept ${order.customer_name}`,
+      text: `New paid order ${order.order_number}\n${contact}\n\nAccept in Counter Admin (that emails the guest):\n${adminUrl}\n\n${ticket}`,
       html,
       headers: {
         "X-Diner-Grill-Order": String(order.order_number || ""),

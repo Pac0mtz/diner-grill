@@ -13,15 +13,35 @@ export const CUSTOMER_EMAIL_SETTING_KEYS = [
   "customer_email_cancelled",
 ];
 
-const SITE = {
+const SITE_DEFAULTS = {
   name: "Diner Grill",
-  url: "https://dinergrill.com",
   phone: "(773) 248-2030",
   phoneHref: "tel:+17732482030",
   address: "1635 W Irving Park Rd, Chicago, IL 60613",
-  orderUrl: "https://dinergrill.com/order",
-  visitUrl: "https://dinergrill.com/visit",
 };
+
+function siteUrl() {
+  const raw = process.env.PUBLIC_SITE_URL || process.env.COOLIFY_URL || "https://dinergrill.com";
+  return String(raw).split(",")[0].trim().replace(/\/$/, "");
+}
+
+function getSite() {
+  const url = siteUrl();
+  return {
+    ...SITE_DEFAULTS,
+    url,
+    orderUrl: `${url}/order`,
+    visitUrl: `${url}/visit`,
+    adminUrl: `${url}/admin`,
+  };
+}
+
+function fromHeader(cfg) {
+  const addr = (cfg.smtp_from || "").trim();
+  if (!addr) return addr;
+  if (addr.includes("<")) return addr;
+  return `"${SITE_DEFAULTS.name}" <${addr}>`;
+}
 
 export function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
@@ -116,7 +136,8 @@ function itemRowsText(order) {
 }
 
 function wrapEmail({ preheader, headline, accent, bodyHtml, order }) {
-  const tplName = SITE.name;
+  const site = getSite();
+  const tplName = site.name;
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width"/><title>${esc(headline)}</title></head>
@@ -139,14 +160,14 @@ function wrapEmail({ preheader, headline, accent, bodyHtml, order }) {
           <table role="presentation" width="100%" style="border-top:2px dashed #d4c4a8;margin-top:8px;padding-top:16px">
             <tr><td style="font-size:13px;color:#555;line-height:1.5">
               <strong style="color:#17130f">Pickup</strong><br/>
-              ${esc(SITE.address)}<br/>
+              ${esc(site.address)}<br/>
               Open 24 hours · Counter pickup<br/>
-              <a href="${SITE.phoneHref}" style="color:#d8402e">${esc(SITE.phone)}</a>
+              <a href="${site.phoneHref}" style="color:#d8402e">${esc(site.phone)}</a>
             </td></tr>
           </table>
           <p style="margin:20px 0 0;font-size:12px;color:#888;line-height:1.4">
             You’re receiving this because you ordered online at
-            <a href="${SITE.url}" style="color:#d8402e">${SITE.url.replace("https://", "")}</a>.
+            <a href="${site.url}" style="color:#d8402e">${site.url.replace(/^https?:\/\//, "")}</a>.
           </p>
         </td></tr>
       </table>
@@ -186,32 +207,48 @@ const TEMPLATES = {
     accent: "#d8402e",
     headline: "Payment confirmed",
     preheader: (o) => `Your Diner Grill order ${o.order_number} is paid — show this at the counter.`,
-    bodyHtml: (o) => `
+    bodyHtml: (o) => {
+      const site = getSite();
+      return `
       <p style="margin:0 0 18px;font-size:16px;line-height:1.55">
         Thanks — your card went through and your ticket is at the kitchen. Show order
         <strong style="color:#d8402e">${esc(o.order_number)}</strong> at the counter when you arrive.
       </p>
       ${orderTable(o)}
       <p style="margin:22px 0 0;font-size:14px;color:#555;line-height:1.5">
-        We’ll email you again when the kitchen accepts your order and when it’s ready for pickup.
-      </p>`,
-    text: (o) =>
-      `Payment confirmed — Diner Grill\nOrder ${o.order_number}\n\nHi ${o.customer_name},\n\nYour order is paid. Show ${o.order_number} at the counter.\n\n${itemRowsText(o)}\n\nSubtotal ${dollars(o.subtotal_cents)}\nTax ${dollars(o.tax_cents)}\nTotal paid ${dollars(o.total_cents)}\n${o.notes ? `\nNotes: ${o.notes}\n` : ""}\nPickup: ${SITE.address}\nOpen 24 hours · ${SITE.phone}\n`,
+        We’ll email you when the kitchen accepts your order and again when it’s ready for pickup.
+        Most tickets take about 10–15 minutes. Questions? Call
+        <a href="${site.phoneHref}" style="color:#d8402e">${esc(site.phone)}</a>.
+      </p>`;
+    },
+    text: (o) => {
+      const site = getSite();
+      return `Payment confirmed — Diner Grill\nOrder ${o.order_number}\n\nHi ${o.customer_name},\n\nYour order is paid. Show ${o.order_number} at the counter.\n\n${itemRowsText(o)}\n\nSubtotal ${dollars(o.subtotal_cents)}\nTax ${dollars(o.tax_cents)}\nTotal paid ${dollars(o.total_cents)}\n${o.notes ? `\nNotes: ${o.notes}\n` : ""}\nPickup: ${site.address}\nOpen 24 hours · ${site.phone}\n`;
+    },
   },
   accepted: {
-    subject: (o) => `Kitchen accepted · Order ${o.order_number}`,
+    subject: (o) => `Kitchen started · Order ${o.order_number}`,
     flag: "accepted",
     accent: "#17130f",
     headline: "Kitchen accepted",
     preheader: (o) => `Order ${o.order_number} is on the griddle at Diner Grill.`,
-    bodyHtml: (o) => `
+    bodyHtml: (o) => {
+      const site = getSite();
+      return `
       <p style="margin:0 0 18px;font-size:16px;line-height:1.55">
-        Good news — the kitchen accepted your order and it’s cooking now.
-        We’ll ping you when <strong>${esc(o.order_number)}</strong> is ready at the counter.
+        The kitchen accepted <strong>${esc(o.order_number)}</strong> and started cooking.
+        Most tickets are ready in about <strong>10–15 minutes</strong>. We’ll email you when it’s at the counter.
       </p>
-      ${orderTable(o)}`,
-    text: (o) =>
-      `Kitchen accepted — Order ${o.order_number}\n\nYour order is being prepared at Diner Grill.\nWe'll email you when it's ready for pickup.\n\n${itemRowsText(o)}\nTotal ${dollars(o.total_cents)}\n`,
+      <p style="margin:0 0 18px;padding:14px 16px;background:#f7edd4;border-radius:6px;font-size:15px;line-height:1.5">
+        Pickup: ${esc(site.address)} · Open 24 hours<br/>
+        Ask for <strong>${esc(o.order_number)}</strong> or ${esc(o.customer_name)}.
+      </p>
+      ${orderTable(o)}`;
+    },
+    text: (o) => {
+      const site = getSite();
+      return `Kitchen accepted — Order ${o.order_number}\n\nYour order is cooking at Diner Grill. Most tickets are ready in about 10–15 minutes.\nWe'll email you when it's ready for pickup.\n\nAsk for ${o.order_number} at ${site.address}\n\n${itemRowsText(o)}\nTotal ${dollars(o.total_cents)}\n`;
+    },
   },
   ready: {
     subject: (o) => `Ready for pickup · Order ${o.order_number}`,
@@ -219,18 +256,23 @@ const TEMPLATES = {
     accent: "#d8402e",
     headline: "Ready for pickup",
     preheader: (o) => `Order ${o.order_number} is ready at the counter — come on in.`,
-    bodyHtml: (o) => `
+    bodyHtml: (o) => {
+      const site = getSite();
+      return `
       <p style="margin:0 0 18px;font-size:16px;line-height:1.55">
         <strong style="color:#d8402e">${esc(o.order_number)}</strong> is ready at the counter.
         Come on in and ask for it by name or order number.
       </p>
       <p style="margin:0 0 18px;padding:14px 16px;background:#17130f;color:#fffdf8;border-radius:6px;font-size:15px;line-height:1.5">
-        ${esc(SITE.address)}<br/>
-        <a href="${SITE.phoneHref}" style="color:#f0c419">${esc(SITE.phone)}</a>
+        ${esc(site.address)}<br/>
+        <a href="${site.phoneHref}" style="color:#f0c419">${esc(site.phone)}</a>
       </p>
-      ${orderTable(o)}`,
-    text: (o) =>
-      `Ready for pickup — Order ${o.order_number}\n\nYour order is ready at the counter.\n${SITE.address}\n${SITE.phone}\n\n${itemRowsText(o)}\n`,
+      ${orderTable(o)}`;
+    },
+    text: (o) => {
+      const site = getSite();
+      return `Ready for pickup — Order ${o.order_number}\n\nYour order is ready at the counter.\n${site.address}\n${site.phone}\n\n${itemRowsText(o)}\n`;
+    },
   },
   completed: {
     subject: (o) => `Thanks for visiting · Order ${o.order_number}`,
@@ -238,18 +280,23 @@ const TEMPLATES = {
     accent: "#17130f",
     headline: "Order complete",
     preheader: () => `Thanks for dining at Diner Grill — see you next time.`,
-    bodyHtml: (o) => `
+    bodyHtml: (o) => {
+      const site = getSite();
+      return `
       <p style="margin:0 0 18px;font-size:16px;line-height:1.55">
         Hope everything hit the spot. Thanks for supporting Chicago’s 24-hour counter —
         home of the Slinger since 1937.
       </p>
       <p style="margin:0 0 8px;font-size:14px">
-        <a href="${SITE.orderUrl}" style="color:#d8402e">Order again</a>
-        · <a href="${SITE.visitUrl}" style="color:#d8402e">Visit info</a>
+        <a href="${site.orderUrl}" style="color:#d8402e">Order again</a>
+        · <a href="${site.visitUrl}" style="color:#d8402e">Visit info</a>
       </p>
-      <p style="margin:16px 0 0;font-size:13px;color:#666">Receipt for ${esc(o.order_number)} · ${dollars(o.total_cents)}</p>`,
-    text: (o) =>
-      `Thanks for visiting Diner Grill!\nOrder ${o.order_number} · ${dollars(o.total_cents)}\nOrder again: ${SITE.orderUrl}\n`,
+      <p style="margin:16px 0 0;font-size:13px;color:#666">Receipt for ${esc(o.order_number)} · ${dollars(o.total_cents)}</p>`;
+    },
+    text: (o) => {
+      const site = getSite();
+      return `Thanks for visiting Diner Grill!\nOrder ${o.order_number} · ${dollars(o.total_cents)}\nOrder again: ${site.orderUrl}\n`;
+    },
   },
   cancelled: {
     subject: (o) => `Order cancelled · ${o.order_number}`,
@@ -257,16 +304,21 @@ const TEMPLATES = {
     accent: "#8a3b2b",
     headline: "Order cancelled",
     preheader: (o) => `Order ${o.order_number} was cancelled. Call us if you have questions.`,
-    bodyHtml: (o) => `
+    bodyHtml: (o) => {
+      const site = getSite();
+      return `
       <p style="margin:0 0 18px;font-size:16px;line-height:1.55">
         Order <strong>${esc(o.order_number)}</strong> has been cancelled.
         If you were charged and expected food, call us at
-        <a href="${SITE.phoneHref}" style="color:#d8402e">${esc(SITE.phone)}</a>
+        <a href="${site.phoneHref}" style="color:#d8402e">${esc(site.phone)}</a>
         and we’ll sort it out.
       </p>
-      ${orderTable(o)}`,
-    text: (o) =>
-      `Order cancelled — ${o.order_number}\n\nThis order was cancelled. Questions? Call ${SITE.phone}.\nTotal was ${dollars(o.total_cents)}\n`,
+      ${orderTable(o)}`;
+    },
+    text: (o) => {
+      const site = getSite();
+      return `Order cancelled — ${o.order_number}\n\nThis order was cancelled. Questions? Call ${site.phone}.\nTotal was ${dollars(o.total_cents)}\n`;
+    },
   },
 };
 
@@ -277,6 +329,7 @@ async function createTransport(cfg) {
     host: cfg.smtp_host,
     port,
     secure,
+    requireTLS: !secure && port === 587,
     auth: cfg.smtp_user ? { user: cfg.smtp_user, pass: cfg.smtp_pass } : undefined,
     connectionTimeout: 15000,
     greetingTimeout: 15000,
@@ -330,7 +383,7 @@ export async function sendCustomerOrderEmail(order, kind, opts = {}) {
   try {
     const transporter = await createTransport(mailCfg);
     const info = await transporter.sendMail({
-      from: `"${SITE.name}" <${mailCfg.smtp_from}>`,
+      from: fromHeader(mailCfg),
       to,
       replyTo: mailCfg.smtp_from,
       subject,
@@ -362,6 +415,16 @@ export function customerEmailKindForStatus(prevStatus, nextStatus) {
   if (nextStatus === "done" && prevStatus !== "done") return "completed";
   if (nextStatus === "cancelled" && prevStatus !== "cancelled") return "cancelled";
   return null;
+}
+
+/** Email kind that matches the order's current status (for resend). */
+export function customerEmailKindForCurrentStatus(status) {
+  if (status === "paid") return "receipt";
+  if (status === "preparing") return "accepted";
+  if (status === "ready") return "ready";
+  if (status === "done") return "completed";
+  if (status === "cancelled") return "cancelled";
+  return "receipt";
 }
 
 /**
@@ -401,7 +464,7 @@ export async function sendPasswordResetEmail({ to, resetUrl, name }) {
   try {
     const transporter = await createTransport(mailCfg);
     const info = await transporter.sendMail({
-      from: `"${SITE.name}" <${mailCfg.smtp_from}>`,
+      from: fromHeader(mailCfg),
       to: String(to).trim().toLowerCase(),
       replyTo: mailCfg.smtp_from,
       subject,

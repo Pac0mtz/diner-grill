@@ -580,8 +580,17 @@ export default function DashboardTab({ onUnauthorized, onNavigate }: DashboardTa
                 label="Staff alerts"
                 detail={
                   data.health.notify_configured
-                    ? "Notify emails configured"
+                    ? "New-order emails go to info@fieldtaskpro.com"
                     : "No notify emails set"
+                }
+              />
+              <HealthRow
+                ok={data.health.smtp_ready}
+                label="Customer emails"
+                detail={
+                  data.health.smtp_ready
+                    ? "Titan SMTP ready — accept/ready emails can send"
+                    : "SMTP not configured — guests will not get status emails"
                 }
               />
               <HealthRow
