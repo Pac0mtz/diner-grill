@@ -95,16 +95,29 @@ export async function getStripeWebhookSecret() {
 const AUTO_WEBHOOK_TAG = "diner-grill-auto-webhook";
 const WEBHOOK_LOCK_KEY = 728341; // arbitrary app-wide advisory lock id
 
+function publicWebhookHost() {
+  const raw = (
+    process.env.PUBLIC_SITE_URL ||
+    process.env.COOLIFY_URL ||
+    process.env.REPLIT_DEV_DOMAIN ||
+    (process.env.REPLIT_DOMAINS || "").split(",")[0] ||
+    ""
+  ).trim();
+  if (!raw) return "";
+  try {
+    const u = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    return u.host;
+  } catch {
+    return raw.replace(/^https?:\/\//, "").split("/")[0];
+  }
+}
+
 export async function ensureWebhookEndpoint() {
   const cfg = await getStripeConfig();
   if (!cfg.secret_key) return { ok: false, message: "Stripe not configured" };
   if (cfg.webhook_secret) return { ok: true, message: "webhook already configured" };
 
-  const domain = (
-    process.env.REPLIT_DEPLOYMENT
-      ? (process.env.REPLIT_DOMAINS || "").split(",")[0]
-      : process.env.REPLIT_DEV_DOMAIN || (process.env.REPLIT_DOMAINS || "").split(",")[0] || ""
-  ).trim();
+  const domain = publicWebhookHost();
   if (!domain) return { ok: false, message: "no public domain available" };
   const url = `https://${domain}/api/stripe/webhook`;
 
