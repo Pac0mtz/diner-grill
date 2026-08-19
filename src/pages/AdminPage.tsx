@@ -533,7 +533,7 @@ export default function AdminPage() {
           {tab === "settings" && <SettingsTab onUnauthorized={logout} />}
         </main>
 
-        {/* Kitchen alert — absolute over this pane only */}
+        {/* Kitchen alert — large modal over the page */}
         <NewOrderTakeover onUnauthorized={logout} />
       </div>
     </div>
