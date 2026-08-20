@@ -432,7 +432,7 @@ export default function AdminPage() {
         </div>
         {/* Quick tab strip */}
         <div
-          className="flex gap-1.5 overflow-x-auto px-3 pb-3 [scrollbar-width:none]"
+          className="flex gap-2 overflow-x-auto px-3 pb-3 [scrollbar-width:none]"
           role="tablist"
           aria-label="Admin sections"
         >
@@ -443,7 +443,7 @@ export default function AdminPage() {
               role="tab"
               aria-selected={tab === t.id}
               onClick={() => selectTab(t.id)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] transition-colors ${
+              className={`shrink-0 rounded-full px-4 py-2.5 font-mono text-[13px] font-semibold uppercase tracking-[0.12em] transition-colors ${
                 tab === t.id
                   ? "bg-mustard text-ink"
                   : "bg-cream/10 text-cream/65 hover:bg-cream/15 hover:text-cream"
@@ -514,13 +514,7 @@ export default function AdminPage() {
 
       {/* Main content pane — new-order overlay fills this box only (not the sidebar) */}
       <div className="relative min-h-svh min-w-0 flex-1 lg:h-svh lg:overflow-hidden">
-        <main className="h-full overflow-y-auto px-4 py-5 sm:px-6 lg:px-6 lg:py-6 xl:px-8">
-          <div className="mb-4 lg:hidden">
-            <h1 className="font-display text-2xl uppercase tracking-[0.06em] sm:text-3xl">
-              {active.label}
-            </h1>
-            <p className="mt-0.5 text-sm text-ink/55">{active.hint}</p>
-          </div>
+        <main className="h-full overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 lg:px-6 lg:py-6 xl:px-8">
           {tab === "dashboard" && (
             <DashboardTab
               onUnauthorized={logout}

@@ -349,8 +349,8 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
 
   return (
     <div className="flex h-full min-h-[28rem] flex-col">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 sm:mb-4 sm:gap-3">
+        <div className="hidden sm:block">
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink/40">
             Kitchen board
           </p>
@@ -463,17 +463,17 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
                 aria-label={`${col.label} column`}
               >
                 <header
-                  className={`flex items-center justify-between gap-2 rounded-t-[0.4rem] border-b-2 px-3 py-2.5 ${col.header}`}
+                  className={`flex items-center justify-between gap-2 rounded-t-[0.4rem] border-b-2 px-3 py-3 sm:py-2.5 ${col.header}`}
                 >
                   <div>
-                    <p className="font-mono text-[12px] font-bold uppercase tracking-[0.14em]">
+                    <p className="font-mono text-[14px] font-bold uppercase tracking-[0.12em] sm:text-[12px] sm:tracking-[0.14em]">
                       {col.label}
                     </p>
-                    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] opacity-70">
+                    <p className="mt-0.5 hidden font-mono text-[10px] uppercase tracking-[0.12em] opacity-70 sm:block">
                       {col.hint}
                     </p>
                   </div>
-                  <span className="grid h-8 min-w-8 place-items-center rounded-md bg-cream/25 px-2 font-mono text-sm font-bold">
+                  <span className="grid h-9 min-w-9 place-items-center rounded-md bg-cream/25 px-2 font-mono text-base font-bold sm:h-8 sm:min-w-8 sm:text-sm">
                     {cards.length}
                   </span>
                 </header>
