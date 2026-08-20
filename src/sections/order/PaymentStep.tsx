@@ -36,6 +36,7 @@ function PaymentForm({
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [wallets, setWallets] = useState(false);
 
   async function confirm() {
     if (!stripe || !elements || submitting) return;
@@ -43,6 +44,9 @@ function PaymentForm({
     setError(null);
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/order?paid=1`,
+      },
       redirect: "if_required",
     });
     if (confirmError) {
@@ -82,11 +86,19 @@ function PaymentForm({
           },
           buttonHeight: 48,
         }}
+          onReady={({ availablePaymentMethods }) => {
+            const methods = availablePaymentMethods
+              ? Object.values(availablePaymentMethods).some(Boolean)
+              : false;
+            setWallets(methods);
+          }}
         onConfirm={() => void confirm()}
       />
-      <p className="my-5 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink/40">
-        or pay with card
-      </p>
+      {wallets && (
+        <p className="my-5 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-ink/40">
+          or pay with card
+        </p>
+      )}
       <PaymentElement
         options={{
           layout: "tabs",
@@ -131,9 +143,9 @@ export default function PaymentStep({
 }: PaymentStepProps) {
   return (
     <div className="mx-auto grid max-w-4xl gap-6 lg:grid-cols-[1fr_340px]">
-      <div className="rounded-lg border-2 border-ink bg-paper p-6 shadow-ticket md:p-8">
+      <div className="rounded-lg border-2 border-ink bg-paper p-5 shadow-ticket sm:p-6 md:p-8">
         <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-chili">Order {orderNumber}</p>
-        <h2 className="mt-2 font-display text-4xl uppercase tracking-[0.06em]">
+        <h2 className="mt-2 font-display text-3xl uppercase tracking-[0.06em] sm:text-4xl">
           Pay for your ticket
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-ink/60">

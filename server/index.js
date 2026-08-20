@@ -557,6 +557,18 @@ async function isOnlineOrderingEnabled() {
   return !(raw === "0" || raw === "false" || raw === "off");
 }
 
+/** Payment method switches — missing/empty defaults to ON. */
+async function isCashAtPickupEnabled() {
+  const raw = ((await getSetting("cash_at_pickup_enabled")) || "1").toLowerCase();
+  return !(raw === "0" || raw === "false" || raw === "off");
+}
+
+async function isCardOnlineEnabled() {
+  const raw = ((await getSetting("card_online_enabled")) || "1").toLowerCase();
+  return !(raw === "0" || raw === "false" || raw === "off");
+}
+
+
 app.get("/api/menu", h(async (req, res) => {
   const sections = (await query("SELECT id, label, note, sort FROM sections ORDER BY sort, id")).rows;
   const items = (
@@ -577,10 +589,15 @@ app.get("/api/menu", h(async (req, res) => {
 // GET /api/stripe/config — publishable key for the checkout page (safe to expose).
 app.get("/api/stripe/config", h(async (req, res) => {
   const cfg = await getStripeConfig();
+  const cash = await isCashAtPickupEnabled();
+  const cardSwitch = await isCardOnlineEnabled();
+  const card = Boolean(cfg.configured && cardSwitch);
   res.json({
-    publishable_key: cfg.publishable_key || null,
+    publishable_key: card ? (cfg.publishable_key || null) : null,
     configured: cfg.configured,
     test_mode: cfg.test_mode,
+    cash_at_pickup_enabled: cash,
+    card_online_enabled: card,
   });
 }));
 
@@ -596,6 +613,14 @@ app.post("/api/orders", optionalCustomerAuth, h(async (req, res) => {
 
   const paymentMethod = req.body && req.body.payment_method === "cash" ? "cash" : "card";
   const stripe = await getStripe();
+  const cashEnabled = await isCashAtPickupEnabled();
+  const cardEnabled = await isCardOnlineEnabled();
+  if (paymentMethod === "cash" && !cashEnabled) {
+    return bad(res, 400, "Cash at pickup is turned off. Please pay by card online.");
+  }
+  if (paymentMethod === "card" && !cardEnabled) {
+    return bad(res, 400, "Online card payment is turned off. Please choose cash at pickup.");
+  }
   if (paymentMethod === "card" && !stripe) {
     return bad(
       res,
@@ -1563,6 +1588,8 @@ async function publicSettings() {
     printer_ip: (await getSetting("printer_ip")) || "",
     printer_device_id: (await getSetting("printer_device_id")) || "",
     online_ordering_enabled: (await isOnlineOrderingEnabled()) ? "1" : "0",
+    cash_at_pickup_enabled: (await isCashAtPickupEnabled()) ? "1" : "0",
+    card_online_enabled: (await isCardOnlineEnabled()) ? "1" : "0",
     ...(await getPublicMailSettings()),
     ...(await getPublicCustomerEmailSettings()),
     ...(await getPublicStripeSettings()),
@@ -1596,6 +1623,13 @@ app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
       body.online_ordering_enabled === true ||
       body.online_ordering_enabled === 1;
     await setSetting("online_ordering_enabled", on ? "1" : "0");
+  }
+
+  for (const k of ["cash_at_pickup_enabled", "card_online_enabled"]) {
+    if (k in body) {
+      const on = body[k] === "1" || body[k] === true || body[k] === 1;
+      await setSetting(k, on ? "1" : "0");
+    }
   }
 
   for (const k of MAIL_SETTING_KEYS) {

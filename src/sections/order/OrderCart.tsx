@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { ChevronDown, Minus, Plus, ShoppingBag, Phone, Pencil, Trash2, X } from "lucide-react";
 import type { CartLine } from "../../lib/order-cart";
@@ -28,8 +28,10 @@ type OrderCartProps = {
   onPlaceOrder: () => void;
   payMethod: PayMethod;
   onPayMethodChange: (m: PayMethod) => void;
-  /** Whether online card payment is currently available (Stripe configured). */
+  /** Whether online card payment is currently available (Stripe + admin toggle). */
   cardAvailable: boolean;
+  /** Whether cash at pickup is offered (admin toggle). */
+  cashAvailable?: boolean;
   /** Compact mode for mobile sheet */
   compact?: boolean;
   /** Collapse control for floating desktop panel */
@@ -39,7 +41,7 @@ type OrderCartProps = {
 };
 
 const inputClass =
-  "w-full rounded-md border-2 border-ink/25 bg-cream px-3 py-2.5 font-body text-sm text-ink placeholder:text-ink/35 focus:border-chili focus:outline-none";
+  "w-full rounded-md border-2 border-ink/25 bg-cream px-3 py-3 text-base text-ink placeholder:text-ink/35 focus:border-chili focus:outline-none sm:py-2.5 sm:text-sm";
 
 export default function OrderCart({
   cart,
@@ -54,6 +56,7 @@ export default function OrderCart({
   payMethod,
   onPayMethodChange,
   cardAvailable,
+  cashAvailable = true,
   compact = false,
   onCollapse,
   signedIn = false,
@@ -68,13 +71,17 @@ export default function OrderCart({
     customer.name.trim().length > 0 && customer.phone.trim().length > 0 && emailOk;
   const canPlace = lines.length > 0 && detailsReady && !placing;
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const showCheckout = checkoutOpen || Boolean(error) || Boolean(payUnavailable);
+  const showCheckout = checkoutOpen;
   const itemCount = lines.reduce((n, l) => n + l.qty, 0);
+
+  useEffect(() => {
+    if (error || payUnavailable) setCheckoutOpen(true);
+  }, [error, payUnavailable]);
 
   return (
     <aside
-      className={`flex h-fit flex-col rounded-lg border-2 border-ink bg-paper shadow-ticket ${
-        compact ? "" : ""
+      className={`flex flex-col rounded-lg border-2 border-ink bg-paper shadow-ticket ${
+        compact ? "h-full min-h-0" : "h-fit"
       }`}
       aria-label="Your order"
     >
@@ -113,7 +120,7 @@ export default function OrderCart({
             Add something from the menu.
           </p>
         ) : (
-          <ul className="max-h-[32vh] space-y-3 overflow-y-auto pr-1">
+          <ul className="space-y-3 pr-1">
             {lines.map((line) => {
               const summary = formatModifierSummary(line.item, line.modifiers);
               return (
@@ -121,16 +128,18 @@ export default function OrderCart({
                   <div className="flex items-start gap-2">
                     <div className="flex items-center rounded-md border-2 border-ink/70 bg-cream">
                       <button
+                        type="button"
                         onClick={() => onSetQty(line.key, line.qty - 1)}
-                        className="grid h-7 w-7 place-items-center transition-colors hover:bg-mustard"
+                        className="grid h-9 w-9 place-items-center transition-colors hover:bg-mustard"
                         aria-label={`Remove one ${line.item.name}`}
                       >
                         <Minus className="h-3.5 w-3.5" aria-hidden />
                       </button>
                       <span className="w-6 text-center font-mono text-sm font-medium">{line.qty}</span>
                       <button
+                        type="button"
                         onClick={() => onSetQty(line.key, line.qty + 1)}
-                        className="grid h-7 w-7 place-items-center transition-colors hover:bg-mustard"
+                        className="grid h-9 w-9 place-items-center transition-colors hover:bg-mustard"
                         aria-label={`Add one more ${line.item.name}`}
                       >
                         <Plus className="h-3.5 w-3.5" aria-hidden />
@@ -138,16 +147,18 @@ export default function OrderCart({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        {itemNeedsCustomize(line.item) && onEditLine ? (
+                        {onEditLine ? (
                           <button
                             type="button"
                             onClick={() => onEditLine(line)}
-                            className="text-left text-sm font-medium leading-tight underline-offset-2 hover:underline"
+                            className="min-w-0 text-left text-sm font-medium leading-tight underline-offset-2 hover:underline"
                           >
-                            {line.item.name}
+                            <span className="line-clamp-2 break-words">{line.item.name}</span>
                           </button>
                         ) : (
-                          <span className="text-sm font-medium leading-tight">{line.item.name}</span>
+                          <span className="line-clamp-2 break-words text-sm font-medium leading-tight">
+                            {line.item.name}
+                          </span>
                         )}
                         <span className="shrink-0 font-mono text-sm text-ink/70">
                           {formatCents(line.unit_price_cents * line.qty)}
@@ -159,14 +170,14 @@ export default function OrderCart({
                       {line.line_note && (
                         <p className="mt-0.5 text-[12px] italic text-ink/45">“{line.line_note}”</p>
                       )}
-                      {itemNeedsCustomize(line.item) && onEditLine && (
+                      {onEditLine && (
                         <button
                           type="button"
                           onClick={() => onEditLine(line)}
                           className="mt-1 inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.14em] text-chili hover:underline"
                         >
                           <Pencil className="h-3 w-3" aria-hidden />
-                          Edit options
+                          {itemNeedsCustomize(line.item) || line.line_note ? "Edit options" : "Add note"}
                         </button>
                       )}
                     </div>
@@ -335,22 +346,28 @@ export default function OrderCart({
                 type="button"
                 role="radio"
                 aria-checked={payMethod === "cash"}
+                disabled={!cashAvailable}
                 onClick={() => onPayMethodChange("cash")}
                 className={`rounded-md border-2 px-3 py-2.5 font-mono text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors ${
                   payMethod === "cash"
                     ? "border-ink bg-ink text-cream"
                     : "border-ink/25 text-ink/60 hover:border-ink hover:text-ink"
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 Cash at pickup
               </button>
             </div>
-            {!cardAvailable && (
+            {!cardAvailable && cashAvailable && (
               <p className="mt-2 text-[12px] leading-snug text-ink/50">
                 Card payment online is temporarily unavailable — pay cash when you pick up.
               </p>
             )}
-            {payMethod === "cash" && (
+            {cardAvailable && !cashAvailable && (
+              <p className="mt-2 text-[12px] leading-snug text-ink/50">
+                Pay by card online — cash at pickup is not available right now.
+              </p>
+            )}
+            {payMethod === "cash" && cashAvailable && (
               <p className="mt-2 text-[12px] leading-snug text-ink/50">
                 Bring cash to the counter — your order goes straight to the kitchen.
               </p>

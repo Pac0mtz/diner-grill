@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { loadStripe } from "@stripe/stripe-js";
 import { Check, ChevronUp, ShoppingBag } from "lucide-react";
 import type { ApiMenuItem, ApiMenuSection } from "../lib/api-types";
@@ -63,16 +63,60 @@ export default function OrderPage() {
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
   const [stripePk, setStripePk] = useState(ENV_STRIPE_PK);
   const [payMethod, setPayMethod] = useState<PayMethod>("card");
+  const [cashAtPickup, setCashAtPickup] = useState(true);
+  const [cardOnline, setCardOnline] = useState(true);
   const [sheet, setSheet] = useState<SheetState | null>(null);
   const [justAdded, setJustAdded] = useState(false);
+  const addedTimer = useRef<number>(0);
 
   const stripePromise = useMemo(() => (stripePk ? loadStripe(stripePk) : null), [stripePk]);
   const totals = cartTotals(cart);
 
-  // If card payment isn't configured, default to cash at pickup.
+  // Keep pay method valid for what's currently offered.
   useEffect(() => {
-    if (!stripePk) setPayMethod("cash");
-  }, [stripePk]);
+    const cardOk = Boolean(stripePk) && cardOnline;
+    if (!cardOk && cashAtPickup) setPayMethod("cash");
+    else if (cardOk && !cashAtPickup) setPayMethod("card");
+  }, [stripePk, cardOnline, cashAtPickup]);
+
+  // Resume after Stripe 3-D Secure redirect.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("redirect_status") !== "succeeded" && params.get("paid") !== "1") return;
+    try {
+      const raw = sessionStorage.getItem("dg_last_order");
+      if (raw) {
+        const saved = JSON.parse(raw) as {
+          order_number?: string;
+          total_cents?: number;
+          pay_method?: PayMethod;
+          customer_name?: string;
+          customer_email?: string;
+        };
+        if (saved.order_number && saved.total_cents != null) {
+          setPlaced({
+            order_number: saved.order_number,
+            total_cents: saved.total_cents,
+          });
+          if (saved.pay_method === "cash" || saved.pay_method === "card") {
+            setPayMethod(saved.pay_method);
+          }
+          if (saved.customer_name || saved.customer_email) {
+            setCustomer((prev) => ({
+              ...prev,
+              name: saved.customer_name || prev.name,
+              email: saved.customer_email || prev.email,
+            }));
+          }
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+    setStep("done");
+    window.history.replaceState({}, "", "/order");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,10 +147,24 @@ export default function OrderPage() {
     let cancelled = false;
     fetch("/api/stripe/config")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { publishable_key?: string | null } | null) => {
-        if (cancelled || !data?.publishable_key) return;
-        setStripePk(data.publishable_key);
-      })
+      .then(
+        (
+          data: {
+            publishable_key?: string | null;
+            cash_at_pickup_enabled?: boolean;
+            card_online_enabled?: boolean;
+          } | null
+        ) => {
+          if (cancelled || !data) return;
+          if (data.publishable_key) setStripePk(data.publishable_key);
+          const cash = data.cash_at_pickup_enabled !== false;
+          const card = data.card_online_enabled !== false && Boolean(data.publishable_key || ENV_STRIPE_PK);
+          setCashAtPickup(cash);
+          setCardOnline(card);
+          if (!card && cash) setPayMethod("cash");
+          else if (card && !cash) setPayMethod("card");
+        }
+      )
       .catch(() => {
         /* keep env fallback */
       });
@@ -127,9 +185,28 @@ export default function OrderPage() {
     }));
   }, [account]);
 
+  useEffect(() => {
+    return () => window.clearTimeout(addedTimer.current);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileCartOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileCartOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [mobileCartOpen]);
+
   function pulseAdded() {
     setJustAdded(true);
-    window.setTimeout(() => setJustAdded(false), 1200);
+    window.clearTimeout(addedTimer.current);
+    addedTimer.current = window.setTimeout(() => setJustAdded(false), 1200);
   }
 
   function addSimple(item: ApiMenuItem) {
@@ -227,7 +304,7 @@ export default function OrderPage() {
       setError("Add at least one item to your ticket.");
       return;
     }
-    if (payMethod === "card" && !stripePromise) {
+    if (payMethod === "card" && (!stripePromise || !cardOnline)) {
       setPayUnavailable(PAY_FALLBACK);
       setMobileCartOpen(true);
       return;
@@ -272,11 +349,26 @@ export default function OrderPage() {
         setMobileCartOpen(true);
         return;
       }
-      setPlaced({
+      const next = {
         order_number: data.order_number,
         client_secret: data.client_secret,
         total_cents: data.total_cents,
-      });
+      };
+      setPlaced(next);
+      try {
+        sessionStorage.setItem(
+          "dg_last_order",
+          JSON.stringify({
+            order_number: data.order_number,
+            total_cents: data.total_cents,
+            pay_method: payMethod,
+            customer_name: customer.name,
+            customer_email: customer.email,
+          })
+        );
+      } catch {
+        /* ignore */
+      }
       setMobileCartOpen(false);
       // Cash orders skip the payment step entirely — go straight to done.
       setStep(payMethod === "cash" ? "done" : "pay");
@@ -351,7 +443,7 @@ export default function OrderPage() {
                   </span>
                 )}
               </p>
-              <h1 className="headline mt-2 text-5xl md:text-6xl lg:text-7xl">
+              <h1 className="headline mt-2 text-[2.65rem] sm:text-5xl md:text-6xl lg:text-7xl">
                 Order <span className="text-chili">Online</span>
               </h1>
               {step === "shop" && orderingEnabled && (
@@ -377,44 +469,45 @@ export default function OrderPage() {
               )}
             </div>
 
-            {/* Step indicator */}
-            <ol
-              className="flex w-full max-w-sm items-stretch gap-2 sm:w-auto"
-              aria-label="Order steps"
-            >
-              {STEPS.map((s, i) => {
-                const done = i < stepIndex;
-                const current = i === stepIndex;
-                return (
-                  <li key={s.id} className="min-w-0 flex-1 sm:flex-none">
-                    <div
-                      className={`flex items-center gap-2 rounded-md border-2 px-3 py-2 ${
-                        current
-                          ? "border-ink bg-ink text-cream"
-                          : done
-                            ? "border-chili/40 bg-chili/10 text-chili"
-                            : "border-ink/15 bg-paper/60 text-ink/35"
-                      }`}
-                    >
-                      <span
-                        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full font-mono text-[11px] font-semibold ${
+            {(orderingEnabled || step !== "shop") && (
+              <ol
+                className="flex w-full max-w-sm items-stretch gap-2 sm:w-auto"
+                aria-label="Order steps"
+              >
+                {STEPS.map((s, i) => {
+                  const done = i < stepIndex;
+                  const current = i === stepIndex;
+                  return (
+                    <li key={s.id} className="min-w-0 flex-1 sm:flex-none">
+                      <div
+                        className={`flex items-center gap-2 rounded-md border-2 px-3 py-2 ${
                           current
-                            ? "bg-mustard text-ink"
+                            ? "border-ink bg-ink text-cream"
                             : done
-                              ? "bg-chili text-cream"
-                              : "bg-ink/10 text-ink/40"
+                              ? "border-chili/40 bg-chili/10 text-chili"
+                              : "border-ink/15 bg-paper/60 text-ink/35"
                         }`}
                       >
-                        {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : i + 1}
-                      </span>
-                      <span className="truncate font-mono text-[11px] font-semibold uppercase tracking-[0.12em]">
-                        {s.label}
-                      </span>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
+                        <span
+                          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full font-mono text-[11px] font-semibold ${
+                            current
+                              ? "bg-mustard text-ink"
+                              : done
+                                ? "bg-chili text-cream"
+                                : "bg-ink/10 text-ink/40"
+                          }`}
+                        >
+                          {done ? <Check className="h-3.5 w-3.5" aria-hidden /> : i + 1}
+                        </span>
+                        <span className="truncate font-mono text-[11px] font-semibold uppercase tracking-[0.12em]">
+                          {s.label}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
           </div>
         </div>
       </header>
@@ -545,7 +638,7 @@ export default function OrderPage() {
         <>
           {/* Collapsed launcher */}
           {!mobileCartOpen && (
-            <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center p-3 sm:inset-x-auto sm:bottom-6 sm:right-6 sm:justify-end sm:p-0">
+            <div className="pointer-events-none fixed inset-x-0 bottom-0 z-[55] flex justify-center p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:inset-x-auto sm:bottom-6 sm:right-6 sm:justify-end sm:p-0">
               <button
                 type="button"
                 onClick={() => setMobileCartOpen(true)}
@@ -572,7 +665,7 @@ export default function OrderPage() {
 
           {/* Expanded floating panel */}
           {mobileCartOpen && (
-            <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-end sm:justify-end sm:p-6">
+            <div className="fixed inset-0 z-[55] flex items-end justify-center sm:items-end sm:justify-end sm:p-6">
               <button
                 type="button"
                 className="absolute inset-0 bg-ink/45 backdrop-blur-[2px]"
@@ -580,7 +673,7 @@ export default function OrderPage() {
                 onClick={() => setMobileCartOpen(false)}
               />
               <div
-                className="relative z-10 flex max-h-[min(88vh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border-2 border-ink bg-cream shadow-ticket sm:rounded-lg"
+                className="relative z-10 flex max-h-[min(88dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-t-xl border-2 border-ink bg-cream pb-[env(safe-area-inset-bottom)] shadow-ticket sm:rounded-lg"
                 role="dialog"
                 aria-modal="true"
                 aria-label="Your ticket"
@@ -603,7 +696,8 @@ export default function OrderPage() {
                     onPlaceOrder={placeOrder}
                     payMethod={payMethod}
                     onPayMethodChange={setPayMethod}
-                    cardAvailable={Boolean(stripePromise)}
+                    cardAvailable={Boolean(stripePromise) && cardOnline}
+                    cashAvailable={cashAtPickup}
                     signedIn={Boolean(account)}
                     signedInEmail={account?.email}
                   />

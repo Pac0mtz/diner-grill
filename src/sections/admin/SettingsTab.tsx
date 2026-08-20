@@ -41,6 +41,8 @@ type Settings = {
   stripe_publishable_key: string;
   stripe_secret_key_hint: string;
   stripe_webhook_secret_hint: string;
+  cash_at_pickup_enabled: string;
+  card_online_enabled: string;
 };
 
 type SettingsTabProps = {
@@ -90,6 +92,8 @@ const emptySettings: Settings = {
   stripe_publishable_key: "",
   stripe_secret_key_hint: "",
   stripe_webhook_secret_hint: "",
+  cash_at_pickup_enabled: "1",
+  card_online_enabled: "1",
 };
 
 function normalizeSettings(data: Partial<Settings>): Settings {
@@ -113,6 +117,8 @@ function normalizeSettings(data: Partial<Settings>): Settings {
     receipt_font: data.receipt_font || "mono",
     receipt_font_size: data.receipt_font_size || "15",
     receipt_logo_url: data.receipt_logo_url ?? emptySettings.receipt_logo_url,
+    cash_at_pickup_enabled: data.cash_at_pickup_enabled === "0" ? "0" : "1",
+    card_online_enabled: data.card_online_enabled === "0" ? "0" : "1",
   };
 }
 
@@ -255,6 +261,8 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
         receipt_font: settings.receipt_font,
         receipt_font_size: settings.receipt_font_size,
         stripe_publishable_key: settings.stripe_publishable_key,
+        cash_at_pickup_enabled: settings.cash_at_pickup_enabled,
+        card_online_enabled: settings.card_online_enabled,
         ...extra,
       };
       if (smtpPass.trim()) body.smtp_pass = smtpPass.trim();
@@ -427,6 +435,44 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
                 : "Live mode ready"
               : "Not configured"}
           </span>
+        </div>
+
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border-2 border-ink/15 px-4 py-3">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={settings.card_online_enabled === "1"}
+              disabled={!settings.stripe_configured}
+              onChange={(e) => patch("card_online_enabled", e.target.checked ? "1" : "0")}
+            />
+            <span>
+              <span className="block font-mono text-[12px] uppercase tracking-[0.14em]">
+                Card online
+              </span>
+              <span className="mt-0.5 block text-sm text-ink/60">
+                Guests can pay with Stripe at checkout
+                {!settings.stripe_configured ? " (needs Stripe keys first)" : ""}.
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border-2 border-ink/15 px-4 py-3">
+            <input
+              type="checkbox"
+              className="mt-1"
+              checked={settings.cash_at_pickup_enabled === "1"}
+              onChange={(e) => patch("cash_at_pickup_enabled", e.target.checked ? "1" : "0")}
+            />
+            <span>
+              <span className="block font-mono text-[12px] uppercase tracking-[0.14em]">
+                Cash at pickup
+              </span>
+              <span className="mt-0.5 block text-sm text-ink/60">
+                Guests can place an order and pay cash at the counter.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
