@@ -29,7 +29,7 @@ const FONT_STACKS: Record<ReceiptStyle["font"], string> = {
 const DEFAULT_STYLE: ReceiptStyle = {
   logoUrl: "/photos/brand/logo-badge.webp",
   font: "mono",
-  fontSize: 12,
+  fontSize: 15,
   name: "Diner Grill",
   address: SITE.address,
   phone: SITE.phone,
@@ -48,7 +48,7 @@ async function fetchReceiptStyle(): Promise<ReceiptStyle> {
     cachedStyle = {
       logoUrl: s.receipt_logo_url ?? DEFAULT_STYLE.logoUrl,
       font: font ?? "mono",
-      fontSize: Math.min(18, Math.max(9, Number(s.receipt_font_size) || 12)),
+      fontSize: Math.min(22, Math.max(11, Number(s.receipt_font_size) || 15)),
       name: s.receipt_name || DEFAULT_STYLE.name,
       address: s.receipt_address || DEFAULT_STYLE.address,
       phone: s.receipt_phone || DEFAULT_STYLE.phone,
@@ -155,46 +155,49 @@ export function buildReceiptHtml(
     margin: 0 auto;
     font-family: ${FONT_STACKS[style.font]};
     font-size: ${style.fontSize}px;
-    line-height: 1.45;
+    font-weight: 700;
+    line-height: 1.4;
     color: #000;
     padding: 6px 2px 14px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .center { text-align: center; }
   .logo {
     display: block;
     margin: 0 auto 6px;
-    width: 88px; height: 88px;
+    width: 96px; height: 96px;
     border-radius: 50%;
     filter: grayscale(1) contrast(1.15);
   }
   .shop-name {
-    font-size: 19px; font-weight: 700; letter-spacing: 2px;
+    font-size: 1.55em; font-weight: 900; letter-spacing: 1.5px;
     text-transform: uppercase;
   }
-  .tagline { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; margin-top: 2px; }
-  .addr { font-size: 11px; margin-top: 5px; }
+  .tagline { font-size: 0.78em; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-top: 2px; }
+  .addr { font-size: 0.92em; font-weight: 700; margin-top: 5px; }
   .rule { border-top: 1px dashed #000; margin: 8px 0; }
   .rule-heavy { border-top: 2px solid #000; margin: 8px 0; }
   .order-num {
-    font-size: 24px; font-weight: 700; text-align: center; letter-spacing: 1px;
+    font-size: 1.85em; font-weight: 900; text-align: center; letter-spacing: 1px;
     margin: 2px 0;
   }
-  .when { text-align: center; font-size: 11px; }
-  .meta { font-size: 12px; }
-  .line { display: flex; gap: 6px; margin-top: 3px; }
-  .line .qty { flex: 0 0 24px; font-weight: 700; }
-  .line .name { flex: 1; word-break: break-word; }
-  .line .amt { flex: 0 0 auto; font-weight: 700; }
-  .mod { padding-left: 30px; font-size: 11px; }
-  .mod.note { font-style: italic; }
-  .totals .row { display: flex; justify-content: space-between; }
-  .totals .grand { font-size: 16px; font-weight: 700; margin-top: 3px; }
-  .notes { font-size: 12px; }
-  .footer { text-align: center; margin-top: 10px; font-size: 11px; }
-  .footer .thanks { font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-size: 12px; }
+  .when { text-align: center; font-size: 0.92em; font-weight: 700; }
+  .meta { font-size: 1.05em; font-weight: 800; }
+  .line { display: flex; gap: 6px; margin-top: 5px; font-weight: 800; }
+  .line .qty { flex: 0 0 1.7em; font-weight: 900; }
+  .line .name { flex: 1; word-break: break-word; font-weight: 800; }
+  .line .amt { flex: 0 0 auto; font-weight: 900; }
+  .mod { padding-left: 1.9em; font-size: 0.92em; font-weight: 700; }
+  .mod.note { font-style: italic; font-weight: 800; }
+  .totals .row { display: flex; justify-content: space-between; font-weight: 700; }
+  .totals .grand { font-size: 1.35em; font-weight: 900; margin-top: 4px; }
+  .notes { font-size: 1.05em; font-weight: 800; }
+  .footer { text-align: center; margin-top: 10px; font-size: 0.92em; font-weight: 700; }
+  .footer .thanks { font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: 1em; }
   .paid-badge {
-    display: inline-block; border: 2px solid #000; padding: 2px 12px;
-    font-weight: 700; letter-spacing: 3px; margin-top: 6px; text-transform: uppercase;
+    display: inline-block; border: 2px solid #000; padding: 3px 12px;
+    font-weight: 900; letter-spacing: 2px; margin-top: 6px; text-transform: uppercase;
   }
 </style>
 </head>

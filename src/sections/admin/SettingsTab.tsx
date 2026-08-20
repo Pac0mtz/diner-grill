@@ -82,7 +82,7 @@ const emptySettings: Settings = {
   receipt_tax_label: "Tax (10.25%)",
   receipt_logo_url: "/photos/brand/logo-badge.webp",
   receipt_font: "mono",
-  receipt_font_size: "12",
+  receipt_font_size: "15",
   stripe_configured: false,
   stripe_test_mode: false,
   stripe_secret_key_set: false,
@@ -111,7 +111,7 @@ function normalizeSettings(data: Partial<Settings>): Settings {
     customer_email_cancelled: data.customer_email_cancelled === "0" ? "0" : "1",
     receipt_width: data.receipt_width || "42",
     receipt_font: data.receipt_font || "mono",
-    receipt_font_size: data.receipt_font_size || "12",
+    receipt_font_size: data.receipt_font_size || "15",
     receipt_logo_url: data.receipt_logo_url ?? emptySettings.receipt_logo_url,
   };
 }
@@ -680,18 +680,18 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
                   <input
                     id="receipt-font-size"
                     type="range"
-                    min={9}
-                    max={18}
+                    min={11}
+                    max={22}
                     step={1}
                     className="mt-3 w-full accent-chili"
-                    value={Number(settings.receipt_font_size) || 12}
+                    value={Number(settings.receipt_font_size) || 15}
                     onChange={(e) => patch("receipt_font_size", e.target.value)}
                   />
                 </div>
               </div>
               <p className="mt-3 text-[12px] leading-relaxed text-ink/50">
-                Applies to receipts printed from this device (Print button on orders). The Epson
-                mail-to-print ticket stays plain text.
+                Applies to receipts printed from this device (Print button on orders). Kitchen
+                tickets also print larger bold type on the Epson.
               </p>
             </div>
           </div>

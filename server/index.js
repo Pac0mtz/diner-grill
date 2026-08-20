@@ -1665,7 +1665,7 @@ app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
         const f = String(body[k] ?? "").trim().toLowerCase();
         await setSetting(k, RECEIPT_FONTS.includes(f) ? f : "mono");
       } else if (k === "receipt_font_size") {
-        const s = Math.min(18, Math.max(9, Number(body[k]) || 12));
+        const s = Math.min(22, Math.max(11, Number(body[k]) || 15));
         await setSetting(k, String(s));
       } else if (k === "receipt_logo_url") {
         const u = String(body[k] ?? "").trim();

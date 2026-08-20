@@ -12,7 +12,7 @@ export const EPSON_DEFAULTS = {
   // Local (browser) print styling — not used by the plain-text Epson ticket.
   receipt_logo_url: "/photos/brand/logo-badge.webp",
   receipt_font: "mono",
-  receipt_font_size: "12",
+  receipt_font_size: "15",
 };
 
 export const RECEIPT_FONTS = ["mono", "sans", "serif", "condensed"];
@@ -87,7 +87,7 @@ export function normalizeTemplate(raw = {}) {
     receipt_tax_label: String(raw.receipt_tax_label || EPSON_DEFAULTS.receipt_tax_label).slice(0, 40),
     receipt_logo_url: normalizeLogoUrl(raw.receipt_logo_url),
     receipt_font: RECEIPT_FONTS.includes(raw.receipt_font) ? raw.receipt_font : EPSON_DEFAULTS.receipt_font,
-    receipt_font_size: String(Math.min(18, Math.max(9, Number(raw.receipt_font_size) || 12))),
+    receipt_font_size: String(Math.min(22, Math.max(11, Number(raw.receipt_font_size) || 15))),
     width,
   };
 }
@@ -200,26 +200,30 @@ export function buildReceiptPrintRows(order, templateInput) {
     align: "center",
   });
   rows.push({ text: rule(w) });
-  rows.push({ text: `Name: ${order.customer_name}` });
-  if (order.phone) rows.push({ text: `Phone: ${order.phone}` });
+  rows.push({ text: `Name: ${order.customer_name}`, em: true, dh: true });
+  if (order.phone) rows.push({ text: `Phone: ${order.phone}`, em: true });
   rows.push({ text: rule(w) });
 
   for (const it of order.items || []) {
-    rows.push({ text: padLine(`${it.qty} x ${it.name}`, cents(it.price_cents * it.qty), w) });
+    rows.push({
+      text: padLine(`${it.qty} x ${it.name}`, cents(it.price_cents * it.qty), w),
+      em: true,
+      dh: true,
+    });
     for (const m of it.modifiers || []) {
       const tag = m.price_cents > 0 ? ` (+${cents(m.price_cents)})` : "";
-      rows.push({ text: `  · ${m.label}${tag}` });
+      rows.push({ text: `  · ${m.label}${tag}`, em: true });
     }
-    if (it.line_note) rows.push({ text: `  · Note: ${it.line_note}` });
+    if (it.line_note) rows.push({ text: `  · Note: ${it.line_note}`, em: true });
   }
   if (order.notes) {
     rows.push({ text: rule(w) });
-    rows.push({ text: `NOTES: ${order.notes}` });
+    rows.push({ text: `NOTES: ${order.notes}`, em: true, dh: true });
   }
   rows.push({ text: rule(w) });
-  rows.push({ text: padLine("Subtotal", cents(order.subtotal_cents), w) });
-  rows.push({ text: padLine(t.receipt_tax_label, cents(order.tax_cents), w) });
-  rows.push({ text: padLine("TOTAL", cents(order.total_cents), w), em: true });
+  rows.push({ text: padLine("Subtotal", cents(order.subtotal_cents), w), em: true });
+  rows.push({ text: padLine(t.receipt_tax_label, cents(order.tax_cents), w), em: true });
+  rows.push({ text: padLine("TOTAL", cents(order.total_cents), w), em: true, dw: true, dh: true });
   rows.push({ text: rule(w, "=") });
   if (t.receipt_footer_1) rows.push({ text: t.receipt_footer_1, align: "center", dw: true, dh: true });
   if (t.receipt_footer_2) rows.push({ text: t.receipt_footer_2, align: "center" });
