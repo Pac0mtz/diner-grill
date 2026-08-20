@@ -23,6 +23,8 @@ import {
   ApiError,
   clearAdminToken,
   getAdminToken,
+  getAdminUsername,
+  setAdminUsername,
 } from "../sections/admin/api";
 import DashboardTab from "../sections/admin/DashboardTab";
 import OrdersTab from "../sections/admin/OrdersTab";
@@ -33,7 +35,7 @@ import NewOrderTakeover from "../sections/admin/NewOrderTakeover";
 
 type Tab = "dashboard" | "orders" | "transactions" | "menu" | "settings";
 
-const TABS: {
+const ALL_TABS: {
   id: Tab;
   label: string;
   hint: string;
@@ -96,6 +98,7 @@ export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [checking, setChecking] = useState(true);
   const [username, setUsername] = useState("");
+  const [adminUser, setAdminUser] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -108,6 +111,16 @@ export default function AdminPage() {
       return false;
     }
   });
+
+  const canManageStripe = adminUser.toLowerCase() === "admin";
+  const tabs = ALL_TABS.filter((t) => {
+    if (t.id === "transactions" && !canManageStripe) return false;
+    return true;
+  }).map((t) =>
+    t.id === "settings" && !canManageStripe
+      ? { ...t, hint: "Print, alerts" }
+      : t
+  );
 
   function toggleSidebar() {
     setSidebarCollapsed((c) => {
@@ -123,6 +136,7 @@ export default function AdminPage() {
   const logout = useCallback(() => {
     void adminLogout();
     setAuthed(false);
+    setAdminUser("");
     setUsername("");
     setPassword("");
     setMobileNavOpen(false);
@@ -135,7 +149,10 @@ export default function AdminPage() {
         return;
       }
       try {
-        await adminFetch("/api/admin/settings");
+        const me = await adminFetch<{ username?: string }>("/api/admin/me");
+        const name = String(me.username || getAdminUsername() || "").trim();
+        setAdminUsername(name);
+        setAdminUser(name);
         setAuthed(true);
       } catch {
         clearAdminToken();
@@ -144,6 +161,12 @@ export default function AdminPage() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!canManageStripe && tab === "transactions") {
+      setTab("dashboard");
+    }
+  }, [canManageStripe, tab]);
 
   // Close mobile drawer on Escape, and when viewport hits desktop.
   useEffect(() => {
@@ -178,12 +201,14 @@ export default function AdminPage() {
     setBusy(true);
     setLoginError(null);
     try {
-      await adminLogin(username.trim(), password);
+      const name = await adminLogin(username.trim(), password);
+      setAdminUser(name || getAdminUsername());
       setAuthed(true);
       setUsername("");
       setPassword("");
     } catch (err) {
       clearAdminToken();
+      setAdminUser("");
       setLoginError(
         err instanceof ApiError && err.status === 401
           ? "Invalid username or password."
@@ -199,7 +224,7 @@ export default function AdminPage() {
     setMobileNavOpen(false);
   }
 
-  const active = TABS.find((t) => t.id === tab) ?? TABS[0];
+  const active = tabs.find((t) => t.id === tab) ?? tabs[0];
 
   if (checking) {
     return (
@@ -284,7 +309,7 @@ export default function AdminPage() {
           Navigate
         </p>
       )}
-      {TABS.map((t) => {
+      {tabs.map((t) => {
         const Icon = t.icon;
         const selected = tab === t.id;
         return (
@@ -436,7 +461,7 @@ export default function AdminPage() {
           role="tablist"
           aria-label="Admin sections"
         >
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -522,9 +547,13 @@ export default function AdminPage() {
             />
           )}
           {tab === "orders" && <OrdersTab onUnauthorized={logout} />}
-          {tab === "transactions" && <TransactionsTab onUnauthorized={logout} />}
+          {tab === "transactions" && canManageStripe && (
+            <TransactionsTab onUnauthorized={logout} />
+          )}
           {tab === "menu" && <MenuTab onUnauthorized={logout} />}
-          {tab === "settings" && <SettingsTab onUnauthorized={logout} />}
+          {tab === "settings" && (
+            <SettingsTab onUnauthorized={logout} canManageStripe={canManageStripe} />
+          )}
         </main>
 
         {/* Kitchen alert — large modal over the page */}

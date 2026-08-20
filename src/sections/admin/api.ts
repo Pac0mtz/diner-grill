@@ -1,6 +1,7 @@
 // Shared admin API helper — token lives in sessionStorage, sent as Bearer.
 
 const TOKEN_KEY = "dg_admin_token";
+const USER_KEY = "dg_admin_username";
 
 export function getAdminToken(): string {
   return sessionStorage.getItem(TOKEN_KEY) ?? "";
@@ -10,11 +11,20 @@ export function setAdminToken(token: string) {
   sessionStorage.setItem(TOKEN_KEY, token);
 }
 
-export function clearAdminToken() {
-  sessionStorage.removeItem(TOKEN_KEY);
+export function getAdminUsername(): string {
+  return sessionStorage.getItem(USER_KEY) ?? "";
 }
 
-export async function adminLogin(username: string, password: string): Promise<void> {
+export function setAdminUsername(username: string) {
+  sessionStorage.setItem(USER_KEY, username);
+}
+
+export function clearAdminToken() {
+  sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(USER_KEY);
+}
+
+export async function adminLogin(username: string, password: string): Promise<string> {
   const res = await fetch("/api/admin/login", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -27,7 +37,10 @@ export async function adminLogin(username: string, password: string): Promise<vo
       typeof data.error === "string" ? data.error : `Login failed (HTTP ${res.status})`
     );
   }
+  const name = String(data.username || username).trim();
   setAdminToken(String(data.token));
+  setAdminUsername(name);
+  return name;
 }
 
 export async function adminLogout(): Promise<void> {

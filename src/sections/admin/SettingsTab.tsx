@@ -47,6 +47,7 @@ type Settings = {
 
 type SettingsTabProps = {
   onUnauthorized: () => void;
+  canManageStripe?: boolean;
 };
 
 const inputClass =
@@ -122,7 +123,10 @@ function normalizeSettings(data: Partial<Settings>): Settings {
   };
 }
 
-export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
+export default function SettingsTab({
+  onUnauthorized,
+  canManageStripe = false,
+}: SettingsTabProps) {
   const [settings, setSettings] = useState<Settings>(emptySettings);
   const [smtpPass, setSmtpPass] = useState("");
   const [stripeSecret, setStripeSecret] = useState("");
@@ -260,14 +264,16 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
         receipt_logo_url: settings.receipt_logo_url,
         receipt_font: settings.receipt_font,
         receipt_font_size: settings.receipt_font_size,
-        stripe_publishable_key: settings.stripe_publishable_key,
-        cash_at_pickup_enabled: settings.cash_at_pickup_enabled,
-        card_online_enabled: settings.card_online_enabled,
         ...extra,
       };
+      if (canManageStripe) {
+        body.stripe_publishable_key = settings.stripe_publishable_key;
+        body.cash_at_pickup_enabled = settings.cash_at_pickup_enabled;
+        body.card_online_enabled = settings.card_online_enabled;
+        if (stripeSecret.trim()) body.stripe_secret_key = stripeSecret.trim();
+        if (stripeWebhook.trim()) body.stripe_webhook_secret = stripeWebhook.trim();
+      }
       if (smtpPass.trim()) body.smtp_pass = smtpPass.trim();
-      if (stripeSecret.trim()) body.stripe_secret_key = stripeSecret.trim();
-      if (stripeWebhook.trim()) body.stripe_webhook_secret = stripeWebhook.trim();
 
       const data = await adminFetch<Partial<Settings>>("/api/admin/settings", {
         method: "PUT",
@@ -403,7 +409,8 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 pb-24">
-      {/* Stripe */}
+      {/* Stripe — super-admin only */}
+      {canManageStripe && (
       <section className="rounded-lg border-2 border-ink bg-paper p-4 shadow-ticket sm:p-6" aria-label="Stripe payments">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -557,6 +564,7 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
           </a>
         </div>
       </section>
+      )}
 
       {/* Receipt editor */}
       <section className="rounded-lg border-2 border-ink bg-paper p-4 shadow-ticket sm:p-6" aria-label="Receipt editor">
@@ -1169,6 +1177,7 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
           >
             {busy ? "Working…" : "Save settings"}
           </button>
+          {canManageStripe && (
           <button
             onClick={() => void testStripe()}
             disabled={busy}
@@ -1178,6 +1187,7 @@ export default function SettingsTab({ onUnauthorized }: SettingsTabProps) {
             <span className="hidden sm:inline">Test Stripe</span>
             <span className="sm:hidden">Stripe</span>
           </button>
+          )}
           {(usesEmail || settings.notify_emails || settings.notify_email_cc) && (
             <button
               onClick={() => void testSmtp()}

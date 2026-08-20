@@ -41,9 +41,25 @@ const COLUMNS: {
     label: "Done",
     hint: "Completed",
     header: "border-ink/25 bg-ink/10 text-ink/60",
-    empty: "No completed tickets",
+    empty: "No completed orders today",
   },
 ];
+
+function chicagoDateKey(iso: string): string {
+  const raw = iso.includes("T") ? iso : iso.replace(" ", "T") + (iso.endsWith("Z") ? "" : "Z");
+  const d = new Date(raw);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+function isChicagoToday(iso: string): boolean {
+  return chicagoDateKey(iso) === chicagoDateKey(new Date().toISOString());
+}
 
 const NEXT: Partial<Record<OrderStatus, { to: OrderStatus; label: string; emailLabel: string }>> = {
   paid: { to: "preparing", label: "Accept", emailLabel: "Accept & email" },
@@ -340,10 +356,8 @@ export default function OrdersTab({ onUnauthorized }: OrdersTabProps) {
       if (o.status === "paid") map.paid.push(o);
       else if (o.status === "preparing") map.preparing.push(o);
       else if (o.status === "ready") map.ready.push(o);
-      else if (o.status === "done") map.done.push(o);
+      else if (o.status === "done" && isChicagoToday(o.created_at)) map.done.push(o);
     }
-    // Done column: keep the board light — last 12 only
-    map.done = map.done.slice(0, 12);
     return map;
   }, [orders]);
 

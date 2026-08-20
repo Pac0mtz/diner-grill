@@ -292,6 +292,10 @@ app.post("/api/admin/logout", adminAuth, h(async (req, res) => {
   res.json({ ok: true });
 }));
 
+app.get("/api/admin/me", adminAuth, h(async (req, res) => {
+  res.json({ username: req.adminUser || "" });
+}));
+
 // ---------------------------------------------------------------------------
 // Customer auth (email + password sessions)
 // ---------------------------------------------------------------------------
@@ -1606,12 +1610,33 @@ async function publicSettings() {
   };
 }
 
+function isSuperAdmin(req) {
+  return String(req.adminUser || "").trim().toLowerCase() === "admin";
+}
+
 app.get("/api/admin/settings", adminAuth, h(async (req, res) => {
-  res.json(await publicSettings());
+  const settings = await publicSettings();
+  // Stripe keys / payment-method switches are admin-only — hide from Saul/Geovanni.
+  if (!isSuperAdmin(req)) {
+    delete settings.stripe_publishable_key;
+    delete settings.stripe_secret_key_hint;
+    delete settings.stripe_webhook_secret_hint;
+    delete settings.stripe_secret_key_set;
+    delete settings.stripe_webhook_secret_set;
+    delete settings.stripe_source_secret;
+    delete settings.stripe_source_webhook;
+    delete settings.stripe_source_publishable;
+    delete settings.cash_at_pickup_enabled;
+    delete settings.card_online_enabled;
+    settings.stripe_configured = Boolean(settings.stripe_configured);
+    settings.stripe_test_mode = Boolean(settings.stripe_test_mode);
+  }
+  res.json(settings);
 }));
 
 app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
   const body = req.body || {};
+  const superAdmin = isSuperAdmin(req);
 
   for (const k of ["printer_ip", "printer_device_id"]) {
     if (k in body) await setSetting(k, body[k] ? String(body[k]).trim() : "");
@@ -1625,10 +1650,12 @@ app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
     await setSetting("online_ordering_enabled", on ? "1" : "0");
   }
 
-  for (const k of ["cash_at_pickup_enabled", "card_online_enabled"]) {
-    if (k in body) {
-      const on = body[k] === "1" || body[k] === true || body[k] === 1;
-      await setSetting(k, on ? "1" : "0");
+  if (superAdmin) {
+    for (const k of ["cash_at_pickup_enabled", "card_online_enabled"]) {
+      if (k in body) {
+        const on = body[k] === "1" || body[k] === true || body[k] === 1;
+        await setSetting(k, on ? "1" : "0");
+      }
     }
   }
 
@@ -1659,31 +1686,33 @@ app.put("/api/admin/settings", adminAuth, h(async (req, res) => {
     }
   }
 
-  // Stripe — blank secret/webhook means keep existing; publishable can be cleared/set freely.
-  if (typeof body.stripe_secret_key === "string" && body.stripe_secret_key.trim()) {
-    const sk = body.stripe_secret_key.trim();
-    if (!sk.startsWith("sk_")) {
-      return bad(res, 400, "Stripe secret key must start with sk_test_ or sk_live_.");
+  // Stripe keys — super-admin only; non-admin payloads ignore these fields (no 403).
+  if (superAdmin) {
+    // Blank secret/webhook means keep existing; publishable can be cleared/set freely.
+    if (typeof body.stripe_secret_key === "string" && body.stripe_secret_key.trim()) {
+      const sk = body.stripe_secret_key.trim();
+      if (!sk.startsWith("sk_")) {
+        return bad(res, 400, "Stripe secret key must start with sk_test_ or sk_live_.");
+      }
+      await setSetting("stripe_secret_key", sk);
     }
-    await setSetting("stripe_secret_key", sk);
-  }
-  if (typeof body.stripe_webhook_secret === "string" && body.stripe_webhook_secret.trim()) {
-    const wh = body.stripe_webhook_secret.trim();
-    if (!wh.startsWith("whsec_")) {
-      return bad(res, 400, "Stripe webhook secret must start with whsec_.");
+    if (typeof body.stripe_webhook_secret === "string" && body.stripe_webhook_secret.trim()) {
+      const wh = body.stripe_webhook_secret.trim();
+      if (!wh.startsWith("whsec_")) {
+        return bad(res, 400, "Stripe webhook secret must start with whsec_.");
+      }
+      await setSetting("stripe_webhook_secret", wh);
     }
-    await setSetting("stripe_webhook_secret", wh);
-  }
-  if ("stripe_publishable_key" in body) {
-    const pk = body.stripe_publishable_key == null ? "" : String(body.stripe_publishable_key).trim();
-    if (pk && !pk.startsWith("pk_")) {
-      return bad(res, 400, "Stripe publishable key must start with pk_test_ or pk_live_.");
+    if ("stripe_publishable_key" in body) {
+      const pk = body.stripe_publishable_key == null ? "" : String(body.stripe_publishable_key).trim();
+      if (pk && !pk.startsWith("pk_")) {
+        return bad(res, 400, "Stripe publishable key must start with pk_test_ or pk_live_.");
+      }
+      await setSetting("stripe_publishable_key", pk);
     }
-    await setSetting("stripe_publishable_key", pk);
+    if (body.clear_stripe_secret_key) await setSetting("stripe_secret_key", "");
+    if (body.clear_stripe_webhook_secret) await setSetting("stripe_webhook_secret", "");
   }
-  // Allow clearing secrets explicitly.
-  if (body.clear_stripe_secret_key) await setSetting("stripe_secret_key", "");
-  if (body.clear_stripe_webhook_secret) await setSetting("stripe_webhook_secret", "");
 
   if (body.reset_receipt_defaults) {
     for (const k of RECEIPT_SETTING_KEYS) {
