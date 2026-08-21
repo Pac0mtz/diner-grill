@@ -19,6 +19,7 @@ import {
   sendMailPrint,
   sendOrderNotification,
   MAIL_SETTING_KEYS,
+  siteUrl,
 } from "./mail-print.js";
 import {
   sendCustomerOrderEmail,
@@ -123,7 +124,6 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 const SESSION_TTL_HOURS = 12;
 const CUSTOMER_SESSION_TTL_DAYS = 30;
 const RESET_TTL_HOURS = 1;
-const PUBLIC_SITE_URL = (process.env.PUBLIC_SITE_URL || "https://dinergrill.com").replace(/\/$/, "");
 
 /** Simple in-memory rate limit: key → timestamps[] */
 const authAttempts = new Map();
@@ -484,7 +484,7 @@ app.post("/api/auth/forgot-password", h(async (req, res) => {
     "INSERT INTO password_reset_tokens (token, customer_id, expires_at) VALUES ($1, $2, now() + ($3 || ' hours')::interval)",
     [token, rows[0].id, String(RESET_TTL_HOURS)]
   );
-  const resetUrl = `${PUBLIC_SITE_URL}/account/reset?token=${token}`;
+  const resetUrl = `${siteUrl()}/account/reset?token=${token}`;
   const sent = await sendPasswordResetEmail({
     to: rows[0].email,
     name: rows[0].name,

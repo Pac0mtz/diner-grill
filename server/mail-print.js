@@ -21,9 +21,30 @@ function envOr(_key, envName, fallback = "") {
   return process.env[envName] || fallback;
 }
 
-function siteUrl() {
-  const raw = process.env.PUBLIC_SITE_URL || process.env.COOLIFY_URL || "https://dinergrill.com";
-  return String(raw).split(",")[0].trim().replace(/\/$/, "");
+/**
+ * Public site URL for email buttons / links.
+ * Prefer https://dinergrill.com — Coolify often sets PUBLIC_SITE_URL to the
+ * sslip preview host, which must never go out in customer/staff emails.
+ */
+export function siteUrl() {
+  const candidates = [
+    process.env.PUBLIC_SITE_URL,
+    ...(String(process.env.COOLIFY_URL || "").split(",")),
+    "https://dinergrill.com",
+  ]
+    .map((s) => String(s || "").trim().replace(/\/$/, ""))
+    .filter(Boolean)
+    .map((s) => (s.includes("://") ? s : `https://${s}`));
+
+  const canon = candidates.find((u) => /^https:\/\/(www\.)?dinergrill\.com$/i.test(u));
+  if (canon) return canon.replace(/^https:\/\/www\./i, "https://");
+
+  const https = candidates.find(
+    (u) => u.startsWith("https://") && !/sslip\.io|localhost|127\.0\.0\.1/i.test(u)
+  );
+  if (https) return https;
+
+  return "https://dinergrill.com";
 }
 
 function fromHeader(cfg) {

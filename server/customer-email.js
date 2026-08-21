@@ -1,7 +1,7 @@
 // Customer-facing order emails: payment receipt + status updates.
 import nodemailer from "nodemailer";
 import { getSetting } from "./db.js";
-import { getMailPrintConfig, MAIL_SETTING_KEYS } from "./mail-print.js";
+import { getMailPrintConfig, MAIL_SETTING_KEYS, siteUrl } from "./mail-print.js";
 import { getReceiptTemplate } from "./receipt-template.js";
 
 export const CUSTOMER_EMAIL_SETTING_KEYS = [
@@ -19,11 +19,6 @@ const SITE_DEFAULTS = {
   phoneHref: "tel:+17732482030",
   address: "1635 W Irving Park Rd, Chicago, IL 60613",
 };
-
-function siteUrl() {
-  const raw = process.env.PUBLIC_SITE_URL || process.env.COOLIFY_URL || "https://dinergrill.com";
-  return String(raw).split(",")[0].trim().replace(/\/$/, "");
-}
 
 function getSite() {
   const url = siteUrl();
